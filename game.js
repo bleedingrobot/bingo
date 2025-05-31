@@ -478,8 +478,8 @@ function showGameBoard() {
 }
 
 function getInviteLink(gameId) {
-  // Use the provided hosting URL
-  return `https://bleedingrobot.github.io/bingo/index.html?invite=${encodeURIComponent(gameId)}`;
+  // Use the provided hosting URL with correct casing
+  return `https://bleedingrobot.github.io/bingo/Index.html?invite=${encodeURIComponent(gameId)}`;
 }
 
 function copyInviteLink(gameId) {
