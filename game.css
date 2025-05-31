@@ -354,30 +354,31 @@ body {
 @media (max-width: 600px) {
   .player-progress-list {
     flex-direction: column;
-    gap: 2px;
-    margin: 6px 0 10px 0;
+    gap: 0;
+    margin: 2px 0 4px 0;
   }
   .player-progress-bar {
-    font-size: 0.95em;
+    font-size: 0.92em;
     min-width: 0;
-    width: 100%;
+    width: auto;
     max-width: 100%;
     justify-content: flex-start;
-    padding: 2px 6px;
+    padding: 0 2px;
     min-height: unset;
     line-height: 1.1;
-    border-radius: 7px;
-    box-shadow: 0 1px 4px #4f6ef705;
-    margin-bottom: 1px;
+    border-radius: 5px;
+    box-shadow: none;
+    margin-bottom: 0;
     background: linear-gradient(90deg, #e0e7ff 60%, #f8fafc 100%);
     border: 1px solid #e3e8f0;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
+    flex: none;
   }
   .player-progress-bar .bar-bg {
-    width: 40px;
+    width: 36px;
     height: 7px;
-    margin-left: 4px;
+    margin-left: 3px;
     margin-right: 2px;
   }
   .player-progress-bar .bar-fill {
@@ -385,11 +386,11 @@ body {
   }
   .player-progress-bar .player-name {
     font-size: 1em;
-    margin-right: 2px;
+    margin-right: 1px;
   }
   .player-progress-bar .player-percent {
     font-size: 0.95em;
-    margin-left: 2px;
+    margin-left: 1px;
   }
 }
 .game-board-actions {
