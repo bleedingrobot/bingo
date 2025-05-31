@@ -1,0 +1,131 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh; color: #333;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.header { text-align: center; color: white; margin-bottom: 30px; }
+.header h1 { font-size: 3rem; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);}
+.header p { font-size: 1.2rem; opacity: 0.9; }
+.main-menu {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px; margin-bottom: 30px;
+}
+.menu-card {
+  background: white; border-radius: 15px; padding: 25px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: transform 0.3s, box-shadow 0.3s; cursor: pointer;
+}
+.menu-card:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0,0,0,0.3); }
+.menu-card h3 { font-size: 1.5rem; margin-bottom: 15px; color: #4285F4; }
+.menu-card p { color: #666; margin-bottom: 20px; }
+.btn {
+  background: #4285F4; color: white; border: none;
+  padding: 12px 25px; border-radius: 8px; font-size: 1rem; cursor: pointer;
+  transition: background 0.3s; width: 100%;
+}
+.btn:hover { background: #1A73E8; }
+.btn-danger { background: #FF5722; }
+.btn-danger:hover { background: #D84315; }
+.btn-success { background: #4CAF50; }
+.btn-success:hover { background: #2E7D32; }
+.modal {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7); z-index: 1000;
+}
+.modal-content {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: white; padding: 30px; border-radius: 15px; max-width: 560px; width: 95%; max-height: 90vh; overflow-y: auto;
+}
+.modal h2 { margin-bottom: 20px; color: #4285F4; }
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+.form-group input, .form-group select {
+  width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;
+}
+.form-group input:focus, .form-group select:focus { outline: none; border-color: #4285F4; }
+.game-board {
+  display: none; background: white; border-radius: 15px; padding: 25px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+.game-header { text-align: center; margin-bottom: 30px; }
+.game-header h2 { font-size: 2rem; margin-bottom: 10px; }
+.game-header p { color: #666; font-size: 1.1rem; }
+.progress-section {
+  background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 30px; text-align: center;
+}
+.progress-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px;
+}
+.stat { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);}
+.stat-value { font-size: 1.5rem; font-weight: bold; color: #4285F4; }
+.stat-label { font-size: 0.9rem; color: #666; }
+.progress-message { font-size: 1.2rem; font-weight: bold; margin-top: 15px; }
+.checklist-grid { display: grid; gap: 15px; margin-bottom: 30px; }
+.checklist-grid.mobile { grid-template-columns: 1fr; }
+.checklist-grid.desktop { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.checklist-item {
+  display: flex; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 10px;
+  border: 2px solid transparent; transition: all 0.3s;
+}
+.checklist-item.completed { background: #4285F4; color: white; border-color: #1A73E8; }
+.checklist-item input[type="checkbox"] { width: 20px; height: 20px; margin-right: 15px; cursor: pointer; }
+.checklist-item label { flex: 1; cursor: pointer; font-size: 1rem; }
+.leaderboard {
+  background: white; border-radius: 15px; padding: 25px; margin-bottom: 30px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+.leaderboard h2 { text-align: center; margin-bottom: 25px; color: #4285F4; }
+.leaderboard-table { width: 100%; border-collapse: collapse; }
+.leaderboard-table th, .leaderboard-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+.leaderboard-table th { background: #4285F4; color: white; font-weight: bold; }
+.leaderboard-table tr.me { background: #E8F0FE; }
+.leaderboard-table tr:hover { background: #f5f5f5; }
+.theme-classic { --primary: #4285F4; --secondary: #E8F0FE; --accent: #1A73E8; }
+.theme-fire { --primary: #FF5722; --secondary: #FFF3E0; --accent: #D84315; }
+.theme-nature { --primary: #4CAF50; --secondary: #F1F8E9; --accent: #2E7D32; }
+.theme-royal { --primary: #9C27B0; --secondary: #F3E5F5; --accent: #7B1FA2; }
+.theme-neon { --primary: #E91E63; --secondary: #FCE4EC; --accent: #C2185B; --accent: #C2185B; }
+@media (max-width: 768px) {
+  .header h1 { font-size: 2rem; }
+  .main-menu { grid-template-columns: 1fr; }
+  .modal-content { width: 95%; margin: 20px; }
+  .checklist-grid { grid-template-columns: 1fr !important; }
+  .leaderboard-table { font-size: 0.9rem; }
+}
+#liveGamesSection {
+  margin-bottom: 30px;
+}
+#liveGamesList {
+  font-size: 1.01rem;
+}
+.game-admin-list {
+  margin-top: 18px;
+  margin-bottom: 8px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f7fafe;
+}
+.game-admin-list .players {
+  font-size: 0.96em;
+  color: #555;
+  margin-top: 2px;
+}
+.admin-btn-row {
+  display:flex;
+  gap:10px;
+  margin-top:5px;
+  flex-wrap:wrap;
+}
+.admin-btn-row button {
+  width:auto;
+  min-width:120px;
+}
+.rubik-cube {
+  font-size: 2.4rem;
+  letter-spacing: 0.1em;
+  margin-right: 0.08em;
+  vertical-align: middle;
+  user-select: none;
+  text-shadow: 1px 1px 3px #3332, 0 1px 2px #3332;
+}

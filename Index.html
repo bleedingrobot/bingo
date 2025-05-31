@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🟪🟩🟥🟦 V 2 PDB Multiplay</title>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
+  <link rel="stylesheet" href="game.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header or Main Menu (add your own as needed) -->
+    <div class="header">
+      <h1>PD Bingo</h1>
+      <p>Welcome to Multiplayer PD Bingo!</p>
+    </div>
+
+    <!-- Join Game Modal -->
+    <div id="joinGameModal" class="modal" onclick="event.stopPropagation()">
+      <div class="modal-content">
+        <h2>🚀 Join a Game</h2>
+        <form onsubmit="joinSelectedGame(event)">
+          <div id="availableGamesList"></div>
+          <div class="form-group" style="margin-top:12px;">
+            <label for="playerNameJoin">Your Player Name:</label>
+            <input type="text" id="playerNameJoin" required maxlength="20" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label for="playerPasswordJoin">Password:</label>
+            <input type="password" id="playerPasswordJoin" required maxlength="20" placeholder="Create a password">
+          </div>
+          <button type="submit" class="btn btn-success">Join Selected Game</button>
+          <button type="button" class="btn" onclick="closeModal('joinGameModal')">Cancel</button>
+        </form>
+        <hr>
+      </div>
+    </div>
+
+    <!-- Player Create Game Modal -->
+    <div id="playerCreateGameModal" class="modal">
+      <div class="modal-content">
+        <h2>Create a Game</h2>
+        <form id="playerCreateGameForm">
+          <div class="form-group">
+            <label for="playerGameName">Game Name:</label>
+            <input type="text" id="playerGameName" required maxlength="30" placeholder="Enter game name">
+          </div>
+          <div class="form-group">
+            <label for="playerDifficulty">Difficulty:</label>
+            <select id="playerDifficulty" required>
+              <option value="easy">Easy</option>
+              <option value="normal">Normal</option>
+              <option value="hard">Hard</option>
+              <option value="epic">Epic</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="playerTheme">Theme:</label>
+            <select id="playerTheme" required>
+              <option value="classic">Classic</option>
+              <option value="fire">Fire</option>
+              <option value="nature">Nature</option>
+              <option value="royal">Royal</option>
+              <option value="neon">Neon</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-success">Create Game</button>
+          <button type="button" class="btn" onclick="closeModal('playerCreateGameModal')">Cancel</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Live Games List -->
+    <div id="liveGamesSection">
+      <h2>Live Games</h2>
+      <div id="liveGamesList"></div>
+    </div>
+
+    <!-- Admin Create Game Form (hidden by default) -->
+    <form id="createGameForm" style="display:none">
+      <input type="text" name="gameName" placeholder="Game Name">
+      <button type="submit">Create</button>
+    </form>
+    <form id="addItemForm" style="display:none">
+      <input type="text" name="item" placeholder="Item">
+      <button type="submit">Add</button>
+    </form>
+
+    <div id="mainMenu" class="main-menu">
+      <div class="menu-card" onclick="showJoinGameModal()">
+        <h3>Join Game</h3>
+        <p>Join an game for the first time</p>
+      </div>
+      <div class="menu-card" onclick="showPlayerCreateGameModal()">
+        <h3>Create Game</h3>
+        <p>Start a new game</p>
+      </div>
+      <div class="menu-card" onclick="showAdminPanel()">
+        <h3>Admin Panel</h3>
+        <p>Admin controls</p>
+      </div>
+      <div class="menu-card" onclick="showRejoinForm()">
+        <h3>Rejoin Game</h3>
+        <p>Continue as an existing player</p>
+      </div>
+    </div>
+    <div id="gameBoard" class="game-board" style="display:none;">
+      <button class="btn" onclick="backToMenu()" style="margin-bottom:20px;">Return to Main Menu</button>
+      <div class="game-header">
+        <h2 id="gameTitle"></h2>
+        <p id="gameSubtitle"></p>
+      </div>
+      <div class="progress-section">
+        <div class="progress-stats">
+          <div class="stat">
+            <div class="stat-value" id="currentScore">0</div>
+            <div class="stat-label">Completed</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="totalItems">0</div>
+            <div class="stat-label">Total Items</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="completionPercent">0%</div>
+            <div class="stat-label">Completion</div>
+          </div>
+        </div>
+        <div class="progress-message" id="progressMessage"></div>
+      </div>
+      <div id="checklistContainer" class="checklist-grid desktop"></div>
+    </div>
+    <div id="leaderboard" class="leaderboard" style="display:none;">
+      <!-- Leaderboard content here -->
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div id="adminGameModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h2>Admin Panel</h2>
+        <div>
+          <button onclick="showAdminTab('createGameTab')" class="btn">Create Game</button>
+          <button onclick="showAdminTab('manageItemsTab')" class="btn">Manage Items</button>
+          <button onclick="showAdminTab('gamesListTab')" class="btn">Manage Games</button>
+        </div>
+        <div id="createGameTab" style="display:none;">
+          <h3>Create Game</h3>
+          <form id="createGameForm">
+            <input type="text" id="adminGameName" placeholder="Game Name" required>
+            <select id="difficulty">
+              <option value="easy">Easy</option>
+              <option value="normal">Normal</option>
+              <option value="hard">Hard</option>
+              <option value="epic">Epic</option>
+            </select>
+            <select id="theme">
+              <option value="classic">Classic</option>
+              <option value="fire">Fire</option>
+              <option value="nature">Nature</option>
+              <option value="royal">Royal</option>
+              <option value="neon">Neon</option>
+            </select>
+            <button type="submit" class="btn btn-success">Create</button>
+          </form>
+        </div>
+        <div id="manageItemsTab" style="display:none;">
+          <h3>Manage Items</h3>
+          <form id="addItemForm">
+            <input type="text" id="newItemInput" placeholder="New Item">
+            <button type="submit" class="btn btn-success">Add</button>
+            <button type="button" class="btn btn-danger" onclick="resetAllItems()">Reset All</button>
+          </form>
+          <ul id="itemList"></ul>
+        </div>
+        <div id="gamesListTab" style="display:none;">
+          <h3>Manage Games</h3>
+          <div id="adminGamesList"></div>
+        </div>
+        <button type="button" class="btn" onclick="closeModal('adminGameModal')">Close</button>
+      </div>
+    </div>
+
+    <!-- Rejoin Game Modal -->
+    <div id="rejoinGameModal" class="modal">
+      <div class="modal-content">
+        <h2>Rejoin Game</h2>
+        <form onsubmit="rejoinGame(event)">
+          <div class="form-group">
+            <label for="rejoinGameSelect">Select Game:</label>
+            <select id="rejoinGameSelect" required></select>
+          </div>
+          <div class="form-group">
+            <label for="rejoinPlayerName">Select Your Name:</label>
+            <select id="rejoinPlayerName" required></select>
+          </div>
+          <div class="form-group">
+            <label for="rejoinPassword">Password:</label>
+            <input type="password" id="rejoinPassword" required maxlength="20" placeholder="Enter your password">
+          </div>
+          <button type="submit" class="btn btn-success">Rejoin Game</button>
+          <button type="button" class="btn" onclick="closeModal('rejoinGameModal')">Cancel</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add any other HTML content, menus, or game board here -->
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
