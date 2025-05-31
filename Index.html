@@ -106,7 +106,10 @@
       </div>
     </div>
     <div id="gameBoard" class="game-board" style="display:none;">
-      <button class="btn" onclick="backToMenu()" style="margin-bottom:20px;">Return to Main Menu</button>
+      <div class="game-board-actions" style="margin-bottom:18px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; align-items:center;">
+        <button class="btn" onclick="backToMenu()">Return to Main Menu</button>
+        <!-- Invite Player button will be injected here by JS -->
+      </div>
       <div class="game-header">
         <h2 id="gameTitle"></h2>
         <p id="gameSubtitle"></p>

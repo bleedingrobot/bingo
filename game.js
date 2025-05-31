@@ -493,15 +493,14 @@ function copyInviteLink(gameId) {
 
 // Add an Invite button to the game board UI when a game is active
 function addInviteButton() {
-  const header = document.querySelector('.game-header');
-  if (!header || document.getElementById('inviteBtn')) return;
+  const actions = document.querySelector('.game-board-actions');
+  if (!actions || document.getElementById('inviteBtn')) return;
   const btn = document.createElement('button');
   btn.id = 'inviteBtn';
   btn.className = 'btn';
-  btn.style.margin = '0 0 15px 10px';
   btn.textContent = 'Invite Player';
   btn.onclick = function() { copyInviteLink(currentGameId); };
-  header.appendChild(btn);
+  actions.appendChild(btn);
 }
 
 // On page load, check for invite code in URL and pre-select the game in the join modal
