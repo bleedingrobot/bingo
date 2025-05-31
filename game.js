@@ -491,6 +491,13 @@ function generateChecklist(readOnly = false) {
     checkbox.disabled = readOnly; // <-- Disable if read-only
     if (!readOnly) {
       checkbox.addEventListener('change', () => toggleItem(idx));
+      // Make the whole itemDiv clickable (except when clicking the checkbox itself)
+      itemDiv.addEventListener('click', (e) => {
+        if (e.target !== checkbox) {
+          checkbox.checked = !checkbox.checked;
+          toggleItem(idx);
+        }
+      });
     }
     const label = document.createElement('label');
     label.htmlFor = `item-${idx}`;
@@ -634,10 +641,18 @@ window.addEventListener('keydown', function(e) {
 });
 
 // Utility: autofocus on input when modal is shown
+// Only focus the first input if nothing is already focused
+// (Prevents focus jumping from password to name)
 document.querySelectorAll('.modal').forEach(modal => {
   modal.addEventListener('transitionend', function() {
-    const input = modal.querySelector('input[type="text"]');
-    if (modal.style.display === 'block' && input) input.focus();
+    if (modal.style.display === 'block') {
+      // Only focus if no input is already focused in this modal
+      const active = document.activeElement;
+      if (!modal.contains(active) || active.tagName !== 'INPUT') {
+        const input = modal.querySelector('input[type="text"], input[type="password"]');
+        if (input) input.focus();
+      }
+    }
   });
 });
 
