@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🟪🟩🟥🟦 V 5 PDB Multiplay</title>
+  <title>🟪🟩🟥🟦 V 1 PDB Multiplay</title>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
   <style>
@@ -175,6 +175,44 @@
           </div>
           <button type="button" class="btn btn-success" onclick="rejoinGame()">Rejoin Game</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Player Create Game Modal -->
+    <div id="playerCreateGameModal" class="modal">
+      <div class="modal-content">
+        <h2>Create a Game</h2>
+        <form id="playerCreateGameForm">
+          <div class="form-group">
+            <label for="playerGameName">Game Name:</label>
+            <input type="text" id="playerGameName" required maxlength="30" placeholder="Enter game name">
+          </div>
+          <div class="form-group">
+            <label for="playerNameCreator">Your Name:</label>
+            <input type="text" id="playerNameCreator" required maxlength="20" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label for="playerDifficulty">Difficulty:</label>
+            <select id="playerDifficulty" required>
+              <option value="easy">Easy</option>
+              <option value="normal">Normal</option>
+              <option value="hard">Hard</option>
+              <option value="epic">Epic</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="playerTheme">Theme:</label>
+            <select id="playerTheme" required>
+              <option value="classic">Classic</option>
+              <option value="fire">Fire</option>
+              <option value="nature">Nature</option>
+              <option value="royal">Royal</option>
+              <option value="neon">Neon</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-success">Create Game</button>
+          <button type="button" class="btn" onclick="closeModal('playerCreateGameModal')">Cancel</button>
+        </form>
       </div>
     </div>
 
