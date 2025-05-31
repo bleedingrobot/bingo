@@ -141,6 +141,7 @@ const themeSettings = {
 const GAMES_PATH = "bingo-multiplayer/games";
 const PLAYERS_PATH = "bingo-multiplayer/players";
 const ITEM_PATH = "bingo-multiplayer/items";
+const CHAT_PATH = "bingo-multiplayer/chat";
 let allItems = [];
 let currentGame = null;
 let currentGameId = null;
@@ -158,7 +159,7 @@ function updateLiveGamesSection() {
       const allPlayers = pSnap.val() || {};
       let html = "";
       if (Object.keys(games).length === 0) {
-        gamesListDiv.innerHTML = "<em>No games currently running! Ask an admin to create a game.</em>";
+        gamesListDiv.innerHTML = "<em>No games currently running! You could create one.</em>";
         return;
       }
       Object.values(games).forEach(game => {
@@ -169,22 +170,20 @@ function updateLiveGamesSection() {
           <span style="color:#000;font-size:0.95em;">
             (${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name})
           </span><br>
-          <span style="color:#000;">Players: ${
-            players.length === 0
-              ? '<em style="color:#000;">none yet</em>'
-              : players.map(p => {
-                  const percent = Math.round((p.completedCount || 0) / (p.totalItems || 1) * 100);
-                  return `
-                    <span style="display:inline-block;vertical-align:middle;background:#E8F0FE;border-radius:5px;padding:2px 8px;margin-right:8px;color:#000;min-width:80px;cursor:pointer;" onclick="viewPlayerBoard('${game.id}','${p.id}')">
-                      ${p.name}
-                      <span style="display:inline-block;width:60px;height:8px;background:#ddd;border-radius:4px;vertical-align:middle;margin-left:6px;position:relative;">
-                        <span style="display:block;height:8px;background:#4CAF50;border-radius:4px;width:${percent}%;"></span>
-                      </span>
-                      <span style="font-size:0.9em;margin-left:4px;">${percent}%</span>
-                    </span>
-                  `;
-                }).join('')
-          }</span>
+          <div class="player-progress-list">` +
+            players.map(p => {
+              const percent = Math.round((p.completedCount || 0) / (p.totalItems || 1) * 100);
+              return `
+                <span class="player-progress-bar" onclick="viewPlayerBoard('${game.id}','${p.id}')">
+                  ${p.name}
+                  <span class="bar-bg">
+                    <span class="bar-fill" style="width:${percent}%;"></span>
+                  </span>
+                  <span style="font-size:0.9em;margin-left:4px;">${percent}%</span>
+                </span>
+              `;
+            }).join('') +
+          `</div>
         </div>`;
       });
       if (!html) html = "<em>No games currently running! Ask an admin to create a game.</em>";
@@ -436,10 +435,17 @@ function joinGame(gameId, playerName, playerPassword) {
         completed: Array(playerItems.length).fill(false),
         completedCount: 0,
         totalItems: playerItems.length,
-        items: playerItems, // <-- Save the unique board!
+        items: playerItems,
         timestamp: Date.now()
+      }).then(() => {
+        // Announce in chat
+        db.ref(`${CHAT_PATH}/${currentGameId}`).push({
+          name: "bingo",
+          text: `${playerName} has joined the game!`,
+          timestamp: Date.now()
+        });
+        showGameBoard();
       });
-      showGameBoard();
     });
   });
 }
@@ -449,6 +455,8 @@ function showGameBoard() {
   document.getElementById('leaderboard').style.display = 'none';
   document.getElementById('gameBoard').style.display = 'block';
   document.body.className = `theme-${currentGame.themeKey}`;
+  // Show chat
+  document.getElementById('chatSection').style.display = 'block';
   db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).once('value').then(snap => {
     const player = snap.val();
     // Use the player's unique board if it exists, otherwise fallback to game items
@@ -467,6 +475,7 @@ function showGameBoard() {
     updateProgress();
     updateLiveLeaderboardUI();
   });
+  listenForChat();
 }
 function generateChecklist(readOnly = false) {
   const container = document.getElementById('checklistContainer');
@@ -501,7 +510,16 @@ function toggleItem(idx) {
   });
   updateProgress();
   generateChecklist();
-  updateLiveLeaderboardUI(); // <-- Add this line
+  updateLiveLeaderboardUI();
+
+  // --- Add this block to post a bingo event to chat ---
+  const itemText = currentGame.items[idx];
+  const action = currentGame.completed[idx] ? "ticked off" : "unticked";
+  db.ref(`${CHAT_PATH}/${currentGameId}`).push({
+    name: "bingo",
+    text: `${currentPlayerName} just ${action}: "${itemText}"`,
+    timestamp: Date.now()
+  });
 }
 function handleChecklistToggle(index, checked) {
   currentGame.completed[index] = checked;
@@ -587,6 +605,8 @@ function hideLeaderboard() {
 function backToMenu() {
   document.getElementById('gameBoard').style.display = 'none';
   document.getElementById('mainMenu').style.display = 'grid';
+  // Hide chat
+  document.getElementById('chatSection').style.display = 'none';
   currentGame = null;
   currentGameId = null;
   currentPlayerId = null;
@@ -692,12 +712,25 @@ function rejoinGame(e) {
 
 // Spectate another player's game board
 function viewPlayerBoard(gameId, playerId) {
+  // If the player is viewing their own board, just go back to editing mode
+  if (playerId === currentPlayerId && gameId === currentGameId) {
+    backToMyBoard();
+    return;
+  }
   spectatingPlayerId = playerId;
   spectatingGameId = gameId;
   db.ref(`${PLAYERS_PATH}/${gameId}/${playerId}`).once('value').then(snap => {
     const player = snap.val();
-    if (!player || !player.items) {
+    if (!player) {
       alert("Player not found or their board is not available.");
+      return;
+    }
+    // Try to get the player's items, or fall back to the game's items
+    let items = Array.isArray(player.items) && player.items.length
+      ? player.items
+      : (currentGame && Array.isArray(currentGame.items) ? currentGame.items : []);
+    if (!items.length) {
+      alert("This player's board is not available.");
       return;
     }
     if (!window._myBoardState) {
@@ -710,11 +743,10 @@ function viewPlayerBoard(gameId, playerId) {
         playerName: currentPlayerName
       };
     }
-    currentGame.items = player.items;
-    // Always create a blank completed array if missing
+    currentGame.items = items;
     currentGame.completed = Array.isArray(player.completed)
       ? player.completed
-      : Array(player.items.length).fill(false);
+      : Array(items.length).fill(false);
     currentGame.completedCount = player.completedCount || 0;
     currentPlayerId = playerId;
     currentGameId = gameId;
@@ -750,3 +782,57 @@ function backToMyBoard() {
   if (btn) btn.remove();
   window._myBoardState = null;
 }
+
+/* Remove or comment out this function and interval if you don't want the big bars on the main menu:
+function updatePlayerProgressDisplay() {
+  const container = document.querySelector('.player-progress-list');
+  if (!container) return;
+  db.ref(`${PLAYERS_PATH}/${currentGameId}`).once('value').then(snapshot => {
+    const players = snapshot.val() || {};
+    container.innerHTML = ""; // Clear existing content
+    Object.values(players).forEach(player => {
+      const percent = Math.round((player.completedCount||0) / (player.totalItems||1) * 100);
+      const playerDiv = document.createElement('div');
+      playerDiv.className = 'player-progress-bar';
+      playerDiv.innerHTML = `
+        <span class="player-name">${player.name}</span>
+        <div class="progress-container" style="flex-grow: 1; margin: 0 10px;">
+          <div class="progress-bar" style="width: ${percent}%; height: 100%; background-color: #4CAF50; border-radius: 4px;"></div>
+        </div>
+        <span class="player-percent">${percent}%</span>
+      `;
+      container.appendChild(playerDiv);
+    });
+  });
+}
+setInterval(updatePlayerProgressDisplay, 5000); // Update every 5 seconds
+*/
+// Listen for new messages
+function listenForChat() {
+  if (!currentGameId) return;
+  db.ref(`${CHAT_PATH}/${currentGameId}`).limitToLast(50).on('value', snap => {
+    const chatDiv = document.getElementById('chatMessages');
+    if (!chatDiv) return;
+    const messages = snap.val() || {};
+    chatDiv.innerHTML = Object.values(messages).map(msg =>
+      msg.name === "bingo"
+        ? `<div style="color:#4CAF50;font-weight:bold;"><span>🎲 ${msg.text}</span></div>`
+        : `<div><b style="color:#4285F4;">${msg.name}:</b> ${msg.text}</div>`
+    ).join('');
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+  });
+}
+
+// Send a message
+document.getElementById('chatForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || !currentPlayerName || !currentGameId) return;
+  db.ref(`${CHAT_PATH}/${currentGameId}`).push({
+    name: currentPlayerName,
+    text,
+    timestamp: Date.now()
+  });
+  input.value = '';
+});

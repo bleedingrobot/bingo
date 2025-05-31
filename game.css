@@ -129,3 +129,58 @@ body {
   user-select: none;
   text-shadow: 1px 1px 3px #3332, 0 1px 2px #3332;
 }
+
+/* Player progress bar list styling */
+.player-progress-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0 20px 0;
+}
+
+/* Each player bar */
+.player-progress-bar {
+  display: flex;
+  align-items: center;
+  background: #E8F0FE;
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-width: 120px;
+  font-size: 1em;
+  margin-bottom: 4px;
+  cursor: pointer;
+  flex: 1 1 200px;
+  max-width: 100%;
+}
+
+.player-progress-bar .bar-bg {
+  display: inline-block;
+  width: 60px;
+  height: 10px;
+  background: #ddd;
+  border-radius: 5px;
+  margin-left: 8px;
+  margin-right: 4px;
+  position: relative;
+  vertical-align: middle;
+}
+.player-progress-bar .bar-fill {
+  display: block;
+  height: 10px;
+  background: #4CAF50;
+  border-radius: 5px;
+}
+
+/* Responsive: stack vertically on small screens */
+@media (max-width: 600px) {
+  .player-progress-list {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .player-progress-bar {
+    font-size: 1.1em;
+    min-width: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
