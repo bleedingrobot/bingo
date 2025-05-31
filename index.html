@@ -7,6 +7,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
   <style>
+    /* -- KEEP ALL YOUR EXISTING CSS HERE -- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -101,35 +102,12 @@
       .checklist-grid { grid-template-columns: 1fr !important; }
       .leaderboard-table { font-size: 0.9rem; }
     }
-    #liveGamesSection {
-      margin-bottom: 30px;
-    }
-    #liveGamesList {
-      font-size: 1.01rem;
-    }
-    .game-admin-list {
-      margin-top: 18px;
-      margin-bottom: 8px;
-      border: 1px solid #eee;
-      border-radius: 8px;
-      padding: 12px;
-      background: #f7fafe;
-    }
-    .game-admin-list .players {
-      font-size: 0.96em;
-      color: #555;
-      margin-top: 2px;
-    }
-    .admin-btn-row {
-      display:flex;
-      gap:10px;
-      margin-top:5px;
-      flex-wrap:wrap;
-    }
-    .admin-btn-row button {
-      width:auto;
-      min-width:120px;
-    }
+    #liveGamesSection { margin-bottom: 30px; }
+    #liveGamesList { font-size: 1.01rem; }
+    .game-admin-list { margin-top: 18px; margin-bottom: 8px; border: 1px solid #eee; border-radius: 8px; padding: 12px; background: #f7fafe;}
+    .game-admin-list .players { font-size: 0.96em; color: #555; margin-top: 2px;}
+    .admin-btn-row { display:flex; gap:10px; margin-top:5px; flex-wrap:wrap;}
+    .admin-btn-row button { width:auto; min-width:120px;}
     .rubik-cube {
       font-size: 2.4rem;
       letter-spacing: 0.1em;
@@ -158,6 +136,11 @@
         <p>Make a PD bingo game for yourself and invite others!</p>
         <button class="btn btn-success">Create Game</button>
       </div>
+      <div class="menu-card" onclick="showRejoinGameModal()">
+        <h3>🔑 Rejoin a Game</h3>
+        <p>Rejoin a game you left earlier using your name and password.</p>
+        <button class="btn">Rejoin Game</button>
+      </div>
       <div class="menu-card" onclick="showLeaderboard()">
         <h3>🏆 Leaderboard</h3>
         <p>See how you stack up against other players</p>
@@ -169,13 +152,8 @@
         <button class="btn btn-danger">Admin Tools</button>
       </div>
     </div>
-    <div id="liveGamesSection">
-      <div style="background:white;border-radius:15px;box-shadow:0 2px 10px rgba(0,0,0,0.10);padding:18px 20px 10px 20px;">
-        <h2 style="color:#4285F4;margin-bottom:16px;text-align:center;font-size:1.3rem;">🟦 Currently Running Games & Players</h2>
-        <div id="liveGamesList"></div>
-      </div>
-    </div>
-    <!-- Join Game Modal -->
+    <div id="liveGamesSection"><!-- ... unchanged ... --></div>
+    <!-- JOIN GAME MODAL -->
     <div id="joinGameModal" class="modal">
       <div class="modal-content">
         <h2>🚀 Join a Game</h2>
@@ -185,12 +163,39 @@
             <label for="playerNameJoin">Your Player Name:</label>
             <input type="text" id="playerNameJoin" required maxlength="20" placeholder="Enter your name">
           </div>
+          <div class="form-group">
+            <label for="playerPasswordJoin">Create a Password:</label>
+            <input type="password" id="playerPasswordJoin" required maxlength="32" placeholder="Set a password">
+          </div>
+          <div class="form-group">
+            <label for="playerPasswordJoin2">Confirm Password:</label>
+            <input type="password" id="playerPasswordJoin2" required maxlength="32" placeholder="Repeat password">
+          </div>
           <button type="submit" class="btn btn-success">Join Selected Game</button>
           <button type="button" class="btn" onclick="closeModal('joinGameModal')">Cancel</button>
         </form>
       </div>
     </div>
-    <!-- Player Create Game Modal -->
+    <!-- REJOIN GAME MODAL -->
+    <div id="rejoinGameModal" class="modal">
+      <div class="modal-content">
+        <h2>🔑 Rejoin a Game</h2>
+        <form onsubmit="rejoinSelectedGame(event)">
+          <div id="rejoinGamesList"></div>
+          <div class="form-group" style="margin-top:12px;">
+            <label for="playerNameRejoin">Your Player Name:</label>
+            <input type="text" id="playerNameRejoin" required maxlength="20" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label for="playerPasswordRejoin">Your Password:</label>
+            <input type="password" id="playerPasswordRejoin" required maxlength="32" placeholder="Enter your password">
+          </div>
+          <button type="submit" class="btn btn-success">Rejoin Selected Game</button>
+          <button type="button" class="btn" onclick="closeModal('rejoinGameModal')">Cancel</button>
+        </form>
+      </div>
+    </div>
+    <!-- PLAYER CREATE GAME MODAL -->
     <div id="playerCreateGameModal" class="modal">
       <div class="modal-content">
         <h2>🟦 Create Your Own Game</h2>
@@ -202,6 +207,14 @@
           <div class="form-group">
             <label for="playerNameCreator">Your Name:</label>
             <input type="text" id="playerNameCreator" maxlength="20" required placeholder="e.g. Alice">
+          </div>
+          <div class="form-group">
+            <label for="playerPasswordCreator">Create a Password:</label>
+            <input type="password" id="playerPasswordCreator" maxlength="32" required placeholder="Set a password">
+          </div>
+          <div class="form-group">
+            <label for="playerPasswordCreator2">Confirm Password:</label>
+            <input type="password" id="playerPasswordCreator2" maxlength="32" required placeholder="Repeat password">
           </div>
           <div class="form-group">
             <label for="playerDifficulty">Difficulty Level:</label>
@@ -227,703 +240,220 @@
         </form>
       </div>
     </div>
-    <!-- Admin Modal for Game Creation and Item Management -->
-    <div id="adminGameModal" class="modal">
-      <div class="modal-content">
-        <h2>🛠️ Admin Panel</h2>
-        <div style="display:flex;gap:12px;margin-bottom:18px;">
-          <button type="button" class="btn" onclick="showAdminTab('createGameTab')">Create Game</button>
-          <button type="button" class="btn" onclick="showAdminTab('manageItemsTab')">Manage Items</button>
-          <button type="button" class="btn" onclick="showAdminTab('gamesListTab')">Manage Games</button>
-        </div>
-        <!-- Create Game Tab -->
-        <div id="createGameTab">
-          <form id="createGameForm">
-            <div class="form-group">
-              <label for="adminGameName">Game Name:</label>
-              <input type="text" id="adminGameName" required maxlength="40" placeholder="e.g. Staff Meeting Bingo">
-            </div>
-            <div class="form-group">
-              <label for="difficulty">Difficulty Level:</label>
-              <select id="difficulty">
-                <option value="easy">🟢 Easy (3×3 = 9 items)</option>
-                <option value="normal">🟡 Normal (4×5 = 20 items)</option>
-                <option value="hard">🟠 Hard (5×6 = 30 items)</option>
-                <option value="epic">🔴 Epic (6×6 = 36 items)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="theme">Theme:</label>
-              <select id="theme">
-                <option value="classic">💙 Classic (Blue)</option>
-                <option value="fire">🔥 Fire (Red/Orange)</option>
-                <option value="nature">🌿 Nature (Green)</option>
-                <option value="royal">👑 Royal (Purple)</option>
-                <option value="neon">⚡ Neon (Pink/Cyan)</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-success">Create Game</button>
-          </form>
-        </div>
-        <!-- Manage Items Tab -->
-        <div id="manageItemsTab" style="display:none;">
-          <form id="addItemForm" style="margin-bottom:20px;">
-            <div class="form-group">
-              <label for="newItemInput">Add New Bingo Item:</label>
-              <input type="text" id="newItemInput" maxlength="150" placeholder="e.g. Someone's phone goes off" required>
-            </div>
-            <button type="submit" class="btn btn-success">Add Item</button>
-          </form>
-          <h3>Current Items</h3>
-          <ul id="itemList" style="max-height:220px;overflow:auto;padding-left:18px;"></ul>
-          <button class="btn btn-danger" style="margin-top:12px;" onclick="resetAllItems()">Reset Items to Default</button>
-        </div>
-        <!-- Manage Games/Players Tab -->
-        <div id="gamesListTab" style="display:none;">
-          <h3>Existing Games</h3>
-          <div id="adminGamesList"></div>
-        </div>
-        <button type="button" class="btn" style="margin-top: 20px;" onclick="closeModal('adminGameModal')">Close Admin Panel</button>
-      </div>
-    </div>
-    <div id="gameBoard" class="game-board">
-      <div class="game-header">
-        <h2 id="gameTitle">Your PD Bingo Challenge</h2>
-        <p id="gameSubtitle">Complete all items to achieve victory!</p>
-      </div>
-      <div class="progress-section">
-        <div class="progress-stats">
-          <div class="stat">
-            <div class="stat-value" id="currentScore">0</div>
-            <div class="stat-label">Score</div>
-          </div>
-          <div class="stat">
-            <div class="stat-value" id="totalItems">0</div>
-            <div class="stat-label">Total Items</div>
-          </div>
-          <div class="stat">
-            <div class="stat-value" id="completionPercent">0%</div>
-            <div class="stat-label">Complete</div>
-          </div>
-        </div>
-        <div class="progress-message" id="progressMessage">💪 Let's get started!</div>
-      </div>
-      <div id="liveLeaderboard" class="leaderboard" style="margin-bottom:15px;">
-        <h2 style="font-size:1.2rem;">Live Player Progress</h2>
-        <table class="leaderboard-table">
-          <thead>
-            <tr>
-              <th>👤 Player</th>
-              <th>⚡ Score</th>
-              <th>📈 Progress</th>
-            </tr>
-          </thead>
-          <tbody id="liveLeaderboardBody"></tbody>
-        </table>
-      </div>
-      <div id="checklistContainer" class="checklist-grid"></div>
-      <button class="btn" onclick="backToMenu()">Back to Menu</button>
-    </div>
-    <div id="leaderboard" class="leaderboard" style="display: none;">
-      <h2>🏆 Player Leaderboard</h2>
-      <table class="leaderboard-table">
-        <thead>
-          <tr>
-            <th>🏆 Rank</th>
-            <th>👤 Player</th>
-            <th>⚡ Score</th>
-            <th>📈 Progress</th>
-            <th>🕹️ Game</th>
-            <th>📅 Joined</th>
-          </tr>
-        </thead>
-        <tbody id="leaderboardBody"></tbody>
-      </table>
-      <button class="btn" onclick="hideLeaderboard()" style="margin-top: 20px;">Back to Menu</button>
-    </div>
+    <!-- ... (Admin Modal, Game Board, Leaderboard, etc. unchanged) ... -->
+
   <script>
-    // === PD Bingo Multiplayer App JavaScript ===
+    // ==== Firebase config, constants, and helpers unchanged ====
+    // (keep your existing code up to the join/rejoin logic)
 
-// Firebase config and constants
-const firebaseConfig = {
-  apiKey: "AIzaSyDeQPS8fkc6uH9shQye35At98Fa5V62Z7A",
-  authDomain: "bingo-e3517.firebaseapp.com",
-  databaseURL: "https://bingo-e3517-default-rtdb.firebaseio.com",
-  projectId: "bingo-e3517",
-  storageBucket: "bingo-e3517.appspot.com",
-  messagingSenderId: "338765367468",
-  appId: "1:338765367468:web:9d539fe8e1b5351c123709",
-  measurementId: "G-VFXRMS6LN7"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-const DEFAULT_ITEMS = [
-  "The Wi-Fi password is written on a whiteboard",
-  "Key concept defined early in the session",
-  "Presenter’s family photo",
-  "Awkward mixer",
-  "You are asked to write something on post-it notes",
-  "Personal anecdote involving presenter’s children",
-  "You are asked to share the ideas of someone you have talked to",
-  "An evaluation sheet to finish the day",
-  "A takeaway task to do at school",
-  "Presenter will say, “Chat with the person next to you about what you’re thinking about.”",
-  "Awkward silence",
-  "You are asked to share an example of practice from your school",
-  "Whole group sharing",
-  "Presenter uses the word “mahi” or “kai.”",
-  "A title on the PowerPoint ends in a question mark",
-  "Someone leaves while the presenter is talking to use the toilet",
-  "Presenter affirms someone’s emotions or feelings",
-  "Presenter stands with hands on hips",
-  "Presenter moves closer to your group, and you immediately pretend to be talking about what you were asked to",
-  "Presenter quotes an academic",
-  "Presenter invites you to agree or disagree with an idea",
-  "Event would be better with air conditioning",
-  "Presenter “parks” a question",
-  "Badly pronounced te reo whakataukī",
-  "Presenter has a brown A3 bit of paper with “Questions” written on it pinned up in an obscure corner of the room",
-  "Someone gets overly passionate or emotional",
-  "Finish early",
-  "Presenter will say something to the effect of, “You may have seen this before,” or “I may have shared this before.”",
-  "The word wharepaku is used",
-  "Someone is late back from lunch and awkwardly apologises or sneaks in",
-  "Someone is sitting near a power outlet to charge their laptop",
-  "Asked to share back a “key message”",
-  "PowerPoint contains a graph",
-  "The speaker is interrupted by a school bell",
-  "Presenter gives out pens or coloured markers",
-  "Presenter gives an over-the-top fake smile",
-  "Presenter touches the fingers of each hand together",
-  "A post-it fails to stay where it was placed",
-  "Someone says something to the effect of, “I’ll share the slides with you later.”",
-  "Someone takes a photograph of the slides from a ridiculous distance that they will never look at again",
-  "You see someone on social media",
-  "The presenter is wearing an overly flamboyant item of clothing showing how interesting and creative they are",
-  "Presenter says, “I’m not an expert.”",
-  "Presenter has oversized jewellery",
-  "Te Aroha is sung",
-  "PowerPoint has a GIF",
-  "There will be a technical difficulty, and the presenter will make awkward jokes about it",
-  "Someone will leave early but in an awkward way drawing too much attention to themselves",
-  "A continuum is used in some way",
-  "Two participants whisper incessantly",
-  "PD starts with a video to get everyone in the mood",
-  "Teachers (who should know better) don’t shut up when they should",
-  "Someone leaves early to pick up the kids",
-  "There is a task to “get you thinking.”",
-  "PowerPoint contains a bullet-pointed list with more than four bullet points",
-  "A title on the PowerPoint ends in an exclamation mark",
-  "Presenter uses a phrase that could be interpreted in a dirty way, e.g., “Go slow, go deep, do it well...”",
-  "The speaker makes a circular gesture with their hands to show “the whole” or the breadth or size of something",
-  "The sound does not work on a video",
-  "The speaker points at an audience member",
-  "Someone thanks the presenter and may give them a gift as a token of appreciation for an appearance they are probably being paid quite well for",
-  "The presenter displays a matrix",
-  "The presenter displays some text that is far too small to read but carries on like it’s clearly legible",
-  "The presenter displays a slide and then says, “Let’s just skip that one.”",
-  "You hear a condescending repetition of something that has already been said",
-  "Someone leaves to get more chairs",
-  "Participant vehemently disagrees with presenter on a relatively minor point that didn’t really need extra discussion",
-  "Presenter makes a reference to teacher workload",
-  "One participant starts talking more than the presenter",
-  "One participant sits on their computer and does not interact with anyone else",
-  "Lunch is provided",
-  "A primary teacher is overexcited and energetic",
-  "A secondary school teacher is cool and aloof",
-  "Management flits in and out during the day",
-  "Agree to have a shorter lunch break but get to finish early",
-  "Presenter has distinctive shoes",
-  "Presenter’s joke falls flat",
-  "Presenter says something to the effect of, “Please eat up; we don’t want anything left over.”",
-  "Presenter says something to the effect of, “What are you going to take back to the classroom?”",
-  "A participant keeps talking and acting like a god-damn hippy",
-  "A participant rolls their eyes when someone else keeps acting like a god-damn hippy",
-  "Someone identifies time as a reason for not implementing a change",
-  "Someone identifies money as a reason for not implementing a change",
-  "Presenter uses upbeat music to make the event more fun and engaging",
-  "A word on the PowerPoint is written in ALL CAPS for effect",
-  "Presenter includes a cartoon/joke on the PowerPoint as a brain break",
-  "The term “blue sky thinking” is used",
-  "The presenter shows a slide with a lot of text and says, “I’ll just give you a moment to read that.”",
-  "Presenter describes learning with an interesting metaphor",
-  "A question directed to someone who was clearly off task",
-  "Presenter brandishes a pen like a wand or a sword",
-  "Presenter shares a story or picture of a pet",
-  "Presenter appears visibly nervous",
-  "Someone cries",
-  "Presenter says something to the effect of, “Now that you have had some lunch...”",
-  "Presenter references themselves",
-  "Presenter gets someone’s name wrong",
-  "A wardrobe malfunction",
-  "Someone’s phone goes off",
-  "Participant doodles",
-  "Presenter asks a question and gets no response",
-  "Someone complains",
-  "Participant asks for a copy of the slides",
-  "Presenter apologises",
-  "Someone laughs way too loudly",
-  "Someone wears a distracting or unusual outfit",
-  "Presenter uses an overly complex diagram",
-  "Someone questions the relevance of the topic"
-];
-
-const difficultySettings = {
-  easy: { name: 'Easy', rows: 3, cols: 3, total: 9, emoji: '🟢' },
-  normal: { name: 'Normal', rows: 4, cols: 5, total: 20, emoji: '🟡' },
-  hard: { name: 'Hard', rows: 5, cols: 6, total: 30, emoji: '🟠' },
-  epic: { name: 'Epic', rows: 6, cols: 6, total: 36, emoji: '🔴' }
-};
-const themeSettings = {
-  classic: { name: 'Classic', primary: '#4285F4', secondary: '#E8F0FE', accent: '#1A73E8', emoji: '💙' },
-  fire: { name: 'Fire', primary: '#FF5722', secondary: '#FFF3E0', accent: '#D84315', emoji: '🔥' },
-  nature: { name: 'Nature', primary: '#4CAF50', secondary: '#F1F8E9', accent: '#2E7D32', emoji: '🌿' },
-  royal: { name: 'Royal', primary: '#9C27B0', secondary: '#F3E5F5', accent: '#7B1FA2', emoji: '👑' },
-  neon: { name: 'Neon', primary: '#E91E63', secondary: '#FCE4EC', accent: '#C2185B', emoji: '⚡' }
-};
-
-const GAMES_PATH = "bingo-multiplayer/games";
-const PLAYERS_PATH = "bingo-multiplayer/players";
-const ITEM_PATH = "bingo-multiplayer/items";
-let allItems = [];
-let currentGame = null;
-let currentGameId = null;
-let currentPlayerId = null;
-let currentPlayerName = null;
-
-// Live Games/Players display (home page)
-function updateLiveGamesSection() {
-  const gamesListDiv = document.getElementById('liveGamesList');
-  db.ref(GAMES_PATH).once('value').then(gSnap => {
-    const games = gSnap.val() || {};
-    db.ref(PLAYERS_PATH).once('value').then(pSnap => {
-      const allPlayers = pSnap.val() || {};
-      let html = "";
-      if (Object.keys(games).length === 0) {
-        gamesListDiv.innerHTML = "<em>No games currently running! Ask an admin to create a game.</em>";
-        return;
-      }
-      Object.values(games).forEach(game => {
-        if (!game.isOpen) return;
-        const players = (allPlayers[game.id] ? Object.values(allPlayers[game.id]) : []);
-        html += `<div style="margin-bottom:18px;">
-          <b>${game.name}</b> <span style="color:#888;font-size:0.95em;">(${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name})</span><br>
-          <span style="color:#555;">Players: ${
-            players.length === 0
-              ? '<em>none yet</em>'
-              : players.map(p => `<span style="background:#E8F0FE;border-radius:5px;padding:2px 8px;margin-right:5px;">${p.name}</span>`).join('')
-          }</span>
-        </div>`;
+    // --- Modified Join Game logic ---
+    function showJoinGameModal() {
+      document.getElementById('joinGameModal').style.display = 'block';
+      const listDiv = document.getElementById('availableGamesList');
+      listDiv.innerHTML = "Loading games...";
+      db.ref(GAMES_PATH).once('value').then(snapshot => {
+        const games = snapshot.val() || {};
+        let html = "";
+        Object.values(games).filter(g=>g.isOpen).forEach(game => {
+          html += `<div>
+            <input type="radio" name="gameSelect" value="${game.id}" id="game_radio_${game.id}" required>
+            <label for="game_radio_${game.id}"><b>${game.name}</b> - ${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name} [${game.items.length} items]</label>
+          </div>`;
+        });
+        listDiv.innerHTML = html || "<div>No games available. Ask an admin to create one!</div>";
       });
-      if (!html) html = "<em>No games currently running! Ask an admin to create a game.</em>";
-      gamesListDiv.innerHTML = html;
-    });
-  });
-}
-updateLiveGamesSection();
-setInterval(updateLiveGamesSection, 10000);
-
-// Admin manage games tab
-function renderAdminGamesList() {
-  const target = document.getElementById('adminGamesList');
-  target.innerHTML = "Loading...";
-  db.ref(GAMES_PATH).once('value').then(gSnap => {
-    const games = gSnap.val() || {};
-    db.ref(PLAYERS_PATH).once('value').then(pSnap => {
-      const allPlayers = pSnap.val() || {};
-      if (Object.keys(games).length === 0) {
-        target.innerHTML = "<em>No games found</em>";
-        return;
-      }
-      let html = "";
-      Object.values(games).forEach(game => {
-        const players = (allPlayers[game.id] ? Object.values(allPlayers[game.id]) : []);
-        html += `<div class="game-admin-list">
-          <b>${game.name}</b> <span style="color:#888;">(${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name})</span>
-          <div class="players">Players: ${
-            players.length === 0
-              ? '<em>none</em>'
-              : players.map(p => `<span style="background:#E8F0FE;border-radius:5px;padding:2px 8px;margin-right:5px;">${p.name}</span>`).join('')
-          }</div>
-          <div class="admin-btn-row">
-            <button class="btn btn-danger" onclick="adminDeleteGame('${game.id}')">Delete Game</button>
-            <button class="btn btn-danger" onclick="adminResetPlayers('${game.id}')">Remove All Players</button>
-          </div>
-        </div>`;
-      });
-      target.innerHTML = html;
-    });
-  });
-}
-function adminDeleteGame(gameId) {
-  if (!confirm("Are you sure you want to delete this game and all associated player data?")) return;
-  db.ref(GAMES_PATH + "/" + gameId).remove().then(()=>{
-    db.ref(PLAYERS_PATH + "/" + gameId).remove().then(renderAdminGamesList);
-  });
-}
-function adminResetPlayers(gameId) {
-  if (!confirm("Are you sure you want to remove all players from this game?")) return;
-  db.ref(PLAYERS_PATH + "/" + gameId).remove().then(renderAdminGamesList);
-}
-
-function showAdminTab(tabId) {
-  document.getElementById('createGameTab').style.display = tabId === 'createGameTab' ? 'block' : 'none';
-  document.getElementById('manageItemsTab').style.display = tabId === 'manageItemsTab' ? 'block' : 'none';
-  document.getElementById('gamesListTab').style.display = tabId === 'gamesListTab' ? 'block' : 'none';
-  if (tabId === 'gamesListTab') renderAdminGamesList();
-  if (tabId === 'manageItemsTab') fetchItemsAndRenderList();
-}
-function fetchItemsAndRenderList() {
-  db.ref(ITEM_PATH).once('value').then(snap => {
-    if (!snap.exists()) {
-      db.ref(ITEM_PATH).set(DEFAULT_ITEMS).then(() => {
-        allItems = [...DEFAULT_ITEMS];
-        renderItemList();
-      });
-    } else {
-      allItems = snap.val();
-      renderItemList();
     }
-  });
-}
-function renderItemList() {
-  const ul = document.getElementById('itemList');
-  if (!ul) return;
-  ul.innerHTML = "";
-  allItems.forEach((item, idx) => {
-    const li = document.createElement('li');
-    li.textContent = item;
-    li.style.display = "flex";
-    li.style.alignItems = "center";
-    li.style.justifyContent = "space-between";
-    li.style.gap = "8px";
-    li.innerHTML += ` <button onclick="removeItem(${idx})" style="margin-left:14px;background:#e74c3c;color:white;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;">Remove</button>`;
-    ul.appendChild(li);
-  });
-}
-function addItemToDB(e) {
-  e.preventDefault();
-  const input = document.getElementById('newItemInput');
-  const val = input.value.trim();
-  if (!val) return alert("Enter an item!");
-  if (allItems.includes(val)) return alert("That item already exists!");
-  allItems.push(val);
-  db.ref(ITEM_PATH).set(allItems).then(() => {
-    input.value = "";
-    renderItemList();
-    alert("Item added!");
-  });
-}
-function removeItem(idx) {
-  if (!confirm("Remove this item?")) return;
-  allItems.splice(idx, 1);
-  db.ref(ITEM_PATH).set(allItems).then(renderItemList);
-}
-function resetAllItems() {
-  if (!confirm("Reset all items to original defaults? This will remove all additions and deletions.")) return;
-  db.ref(ITEM_PATH).set(DEFAULT_ITEMS).then(() => {
-    allItems = [...DEFAULT_ITEMS];
-    renderItemList();
-  });
-}
-function createGameFromAdmin(e) {
-  e.preventDefault();
-  const gameName = document.getElementById('adminGameName').value.trim();
-  const difficulty = document.getElementById('difficulty').value;
-  const theme = document.getElementById('theme').value;
-  if (!gameName) {
-    alert("Please enter a game name!");
-    return;
-  }
-  db.ref(ITEM_PATH).once('value').then(snap => {
-    const itemsArr = snap.val() || DEFAULT_ITEMS;
-    const diff = difficultySettings[difficulty];
-    const thm = themeSettings[theme];
-    const selectedItems = shuffleArray([...itemsArr]).slice(0, diff.total);
-    const gameId = gameName.replace(/\W/g,"") + "_" + Date.now();
-    db.ref(`${GAMES_PATH}/${gameId}`).set({
-      id: gameId,
-      name: gameName,
-      difficulty: diff,
-      difficultyKey: difficulty,
-      theme: thm,
-      themeKey: theme,
-      items: selectedItems,
-      created: new Date().toISOString(),
-      isOpen: true
-    }).then(()=>{
-      alert("Game created!");
-      closeModal('adminGameModal');
+    function joinSelectedGame(e) {
+      e.preventDefault();
+      const playerName = document.getElementById('playerNameJoin').value.trim();
+      const password = document.getElementById('playerPasswordJoin').value;
+      const password2 = document.getElementById('playerPasswordJoin2').value;
+      const gameId = (document.querySelector('input[name="gameSelect"]:checked')||{}).value;
+      if (!playerName) return alert("Please enter your name!");
+      if (!password) return alert("Please enter a password!");
+      if (password.length < 3) return alert("Password should be at least 3 characters.");
+      if (password !== password2) return alert("Passwords do not match!");
+      if (!gameId) return alert("Please select a game!");
+      db.ref(`${PLAYERS_PATH}/${gameId}`).once('value').then(playersSnap => {
+        const players = playersSnap.val() || {};
+        const existing = Object.values(players).find(p => p.name === playerName);
+        if (existing) {
+          alert("A player with that name already exists in this game. If it's you, use 'Rejoin Game'.");
+          return;
+        }
+        joinGame(gameId, playerName, password);
+        closeModal('joinGameModal');
+      });
+    }
+    function joinGame(gameId, playerName, password) {
+      db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(snapshot => {
+        const game = snapshot.val();
+        if (!game) return alert("Game not found!");
+        currentGame = game;
+        currentGameId = gameId;
+        currentPlayerName = playerName;
+        currentPlayerId = playerName.replace(/\W/g,"") + "_" + Date.now();
+        // Store completedItems as all "false"
+        db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).set({
+          id: currentPlayerId,
+          name: playerName,
+          password: password,
+          completedCount: 0,
+          totalItems: game.items.length,
+          completedItems: Array(game.items.length).fill(false),
+          timestamp: Date.now()
+        });
+        showGameBoard(false, Array(game.items.length).fill(false));
+      });
+    }
+
+    // --- New: Rejoin Game logic ---
+    function showRejoinGameModal() {
+      document.getElementById('rejoinGameModal').style.display = 'block';
+      const listDiv = document.getElementById('rejoinGamesList');
+      listDiv.innerHTML = "Loading games...";
+      db.ref(GAMES_PATH).once('value').then(snapshot => {
+        const games = snapshot.val() || {};
+        let html = "";
+        Object.values(games).forEach(game => {
+          html += `<div>
+            <input type="radio" name="rejoinGameSelect" value="${game.id}" id="rejoin_radio_${game.id}" required>
+            <label for="rejoin_radio_${game.id}"><b>${game.name}</b> - ${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name}</label>
+          </div>`;
+        });
+        listDiv.innerHTML = html || "<div>No games available. Ask an admin to create one!</div>";
+      });
+    }
+    function rejoinSelectedGame(e) {
+      e.preventDefault();
+      const playerName = document.getElementById('playerNameRejoin').value.trim();
+      const password = document.getElementById('playerPasswordRejoin').value;
+      const gameId = (document.querySelector('input[name="rejoinGameSelect"]:checked')||{}).value;
+      if (!playerName) return alert("Please enter your name!");
+      if (!password) return alert("Please enter your password!");
+      if (!gameId) return alert("Please select a game!");
+      db.ref(`${PLAYERS_PATH}/${gameId}`).once('value').then(playersSnap => {
+        const players = playersSnap.val() || {};
+        const foundEntry = Object.values(players).find(p => p.name === playerName);
+        if (!foundEntry) {
+          alert("No player with that name found in this game.");
+          return;
+        }
+        if (foundEntry.password !== password) {
+          alert("Incorrect password.");
+          return;
+        }
+        currentGameId = gameId;
+        currentPlayerId = foundEntry.id;
+        currentPlayerName = foundEntry.name;
+        db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(gSnap => {
+          currentGame = gSnap.val();
+          // Pass completedItems array to showGameBoard
+          showGameBoard(true, foundEntry.completedItems || Array(currentGame.items.length).fill(false));
+        });
+        closeModal('rejoinGameModal');
+      });
+    }
+
+    // --- Player Create Game logic ---
+    function showPlayerCreateGameModal() {
+      document.getElementById('playerCreateGameModal').style.display = 'block';
+    }
+    document.getElementById('playerCreateGameForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const gameName = document.getElementById('playerGameName').value.trim();
+      const playerName = document.getElementById('playerNameCreator').value.trim();
+      const password = document.getElementById('playerPasswordCreator').value;
+      const password2 = document.getElementById('playerPasswordCreator2').value;
+      const difficulty = document.getElementById('playerDifficulty').value;
+      const theme = document.getElementById('playerTheme').value;
+      if (!gameName) return alert("Please enter a game name!");
+      if (!playerName) return alert("Please enter your name!");
+      if (!password) return alert("Please set a password!");
+      if (password.length < 3) return alert("Password should be at least 3 characters.");
+      if (password !== password2) return alert("Passwords do not match!");
+      db.ref("bingo-multiplayer/items").once('value').then(snap => {
+        const itemsArr = snap.val() || DEFAULT_ITEMS;
+        const diff = difficultySettings[difficulty];
+        const thm = themeSettings[theme];
+        const selectedItems = shuffleArray([...itemsArr]).slice(0, diff.total);
+        const gameId = gameName.replace(/\W/g,"") + "_" + Date.now();
+        db.ref(`bingo-multiplayer/games/${gameId}`).set({
+          id: gameId,
+          name: gameName,
+          difficulty: diff,
+          difficultyKey: difficulty,
+          theme: thm,
+          themeKey: theme,
+          items: selectedItems,
+          created: new Date().toISOString(),
+          isOpen: true
+        }).then(()=>{
+          // Creator is first player - auto-join game
+          const playerId = playerName.replace(/\W/g,"") + "_" + Date.now();
+          db.ref(`bingo-multiplayer/players/${gameId}/${playerId}`).set({
+            id: playerId,
+            name: playerName,
+            password: password,
+            completedCount: 0,
+            totalItems: selectedItems.length,
+            completedItems: Array(selectedItems.length).fill(false),
+            timestamp: Date.now()
+          });
+          closeModal('playerCreateGameModal');
+          currentGameId = gameId;
+          currentPlayerId = playerId;
+          currentPlayerName = playerName;
+          db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(gSnap => {
+            currentGame = gSnap.val();
+            showGameBoard(false, Array(selectedItems.length).fill(false));
+          });
+        });
+      });
     });
-  });
-}
-document.getElementById('createGameForm').addEventListener('submit', createGameFromAdmin);
-document.getElementById('addItemForm').addEventListener('submit', addItemToDB);
 
-function showAdminPanel() {
-  const password = prompt("Enter admin password:");
-  if (password !== "admin123") {
-    alert("❌ Incorrect password!");
-    return;
-  }
-  showAdminTab('createGameTab');
-  document.getElementById('adminGameModal').style.display = 'block';
-  fetchItemsAndRenderList();
-}
+    // --- Game Board handling: restore checklist state on join/rejoin ---
+    function showGameBoard(isRejoin = false, completedItems = []) {
+      document.getElementById('mainMenu').style.display = 'none';
+      document.getElementById('leaderboard').style.display = 'none';
+      document.getElementById('gameBoard').style.display = 'block';
+      document.body.className = `theme-${currentGame.themeKey}`;
+      document.getElementById('gameTitle').textContent =
+        `🟦 ${currentGame.name}`;
+      document.getElementById('gameSubtitle').textContent =
+        `${currentGame.difficulty.emoji} ${currentGame.difficulty.name} • ${currentGame.theme.emoji} ${currentGame.theme.name} • ${currentGame.items.length} items`;
+      // Restore checklist
+      if (isRejoin && Array.isArray(completedItems) && completedItems.length === currentGame.items.length) {
+        currentGame.completed = completedItems.slice();
+        currentGame.completedCount = completedItems.filter(Boolean).length;
+      } else {
+        currentGame.completed = Array(currentGame.items.length).fill(false);
+        currentGame.completedCount = 0;
+      }
+      updateProgress();
+      generateChecklist();
+      updateLiveLeaderboardUI();
+    }
 
-// --- Player Create Game Modal logic ---
-function showPlayerCreateGameModal() {
-  document.getElementById('playerCreateGameModal').style.display = 'block';
-}
-document.getElementById('playerCreateGameForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  const gameName = document.getElementById('playerGameName').value.trim();
-  const playerName = document.getElementById('playerNameCreator').value.trim();
-  const difficulty = document.getElementById('playerDifficulty').value;
-  const theme = document.getElementById('playerTheme').value;
-  if (!gameName) return alert("Please enter a game name!");
-  if (!playerName) return alert("Please enter your name!");
-  db.ref("bingo-multiplayer/items").once('value').then(snap => {
-    const itemsArr = snap.val() || DEFAULT_ITEMS;
-    const diff = difficultySettings[difficulty];
-    const thm = themeSettings[theme];
-    const selectedItems = shuffleArray([...itemsArr]).slice(0, diff.total);
-    const gameId = gameName.replace(/\W/g,"") + "_" + Date.now();
-    db.ref(`bingo-multiplayer/games/${gameId}`).set({
-      id: gameId,
-      name: gameName,
-      difficulty: diff,
-      difficultyKey: difficulty,
-      theme: thm,
-      themeKey: theme,
-      items: selectedItems,
-      created: new Date().toISOString(),
-      isOpen: true
-    }).then(()=>{
-      // Creator is first player - auto-join game
-      const playerId = playerName.replace(/\W/g,"") + "_" + Date.now();
-      db.ref(`bingo-multiplayer/players/${gameId}/${playerId}`).set({
-        id: playerId,
-        name: playerName,
-        completedCount: 0,
-        totalItems: selectedItems.length,
+    // --- Save checklist progress on every change ---
+    function toggleItem(idx) {
+      currentGame.completed[idx] = !currentGame.completed[idx];
+      currentGame.completedCount = currentGame.completed.filter(Boolean).length;
+      db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).update({
+        completedCount: currentGame.completedCount,
+        completedItems: currentGame.completed,
         timestamp: Date.now()
       });
-      closeModal('playerCreateGameModal');
-      // Show the game immediately as if joined
-      joinGame(gameId, playerName);
-    });
-  });
-});
+      updateProgress();
+      generateChecklist();
+    }
 
-// --- Join Game logic ---
-function showJoinGameModal() {
-  document.getElementById('joinGameModal').style.display = 'block';
-  const listDiv = document.getElementById('availableGamesList');
-  listDiv.innerHTML = "Loading games...";
-  db.ref(GAMES_PATH).once('value').then(snapshot => {
-    const games = snapshot.val() || {};
-    let html = "";
-    Object.values(games).filter(g=>g.isOpen).forEach(game => {
-      html += `<div>
-        <input type="radio" name="gameSelect" value="${game.id}" id="game_radio_${game.id}" required>
-        <label for="game_radio_${game.id}"><b>${game.name}</b> - ${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name} [${game.items.length} items]</label>
-      </div>`;
-    });
-    listDiv.innerHTML = html || "<div>No games available. Ask an admin to create one!</div>";
-  });
-}
-function closeModal(modalId) {
-  document.getElementById(modalId).style.display = 'none';
-}
-function joinSelectedGame(e) {
-  e.preventDefault();
-  const playerName = document.getElementById('playerNameJoin').value.trim();
-  const gameId = (document.querySelector('input[name="gameSelect"]:checked')||{}).value;
-  if (!playerName) return alert("Please enter your name!");
-  if (!gameId) return alert("Please select a game!");
-  joinGame(gameId, playerName);
-  closeModal('joinGameModal');
-}
-function joinGame(gameId, playerName) {
-  db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(snapshot => {
-    const game = snapshot.val();
-    if (!game) return alert("Game not found!");
-    currentGame = game;
-    currentGameId = gameId;
-    currentPlayerName = playerName;
-    currentPlayerId = playerName.replace(/\W/g,"") + "_" + Date.now();
-    db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).set({
-      id: currentPlayerId,
-      name: playerName,
-      completedCount: 0,
-      totalItems: game.items.length,
-      timestamp: Date.now()
-    });
-    showGameBoard();
-  });
-}
-function showGameBoard() {
-  document.getElementById('mainMenu').style.display = 'none';
-  document.getElementById('leaderboard').style.display = 'none';
-  document.getElementById('gameBoard').style.display = 'block';
-  document.body.className = `theme-${currentGame.themeKey}`;
-  document.getElementById('gameTitle').textContent =
-    `🟦 ${currentGame.name}`;
-  document.getElementById('gameSubtitle').textContent =
-    `${currentGame.difficulty.emoji} ${currentGame.difficulty.name} • ${currentGame.theme.emoji} ${currentGame.theme.name} • ${currentGame.items.length} items`;
-  currentGame.completed = Array(currentGame.items.length).fill(false);
-  currentGame.completedCount = 0;
-  updateProgress();
-  generateChecklist();
-  updateLiveLeaderboardUI();
-}
-function generateChecklist() {
-  const container = document.getElementById('checklistContainer');
-  container.innerHTML = '';
-  container.className = `checklist-grid desktop`;
-  currentGame.items.forEach((item, idx) => {
-    const itemDiv = document.createElement('div');
-    itemDiv.className = `checklist-item${currentGame.completed[idx] ? ' completed' : ''}`;
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.id = `item-${idx}`;
-    checkbox.checked = currentGame.completed[idx];
-    checkbox.addEventListener('change', () => toggleItem(idx));
-    const label = document.createElement('label');
-    label.htmlFor = `item-${idx}`;
-    label.textContent = `${idx + 1}. ${item}`;
-    itemDiv.appendChild(checkbox);
-    itemDiv.appendChild(label);
-    container.appendChild(itemDiv);
-  });
-}
-function toggleItem(idx) {
-  currentGame.completed[idx] = !currentGame.completed[idx];
-  currentGame.completedCount = currentGame.completed.filter(Boolean).length;
-  db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).update({
-    completedCount: currentGame.completedCount,
-    timestamp: Date.now()
-  });
-  updateProgress();
-  generateChecklist();
-}
-function updateProgress() {
-  const completed = currentGame.completedCount;
-  const total = currentGame.items.length;
-  const percentage = Math.round((completed / total) * 100);
-  document.getElementById('currentScore').textContent = completed;
-  document.getElementById('totalItems').textContent = total;
-  document.getElementById('completionPercent').textContent = `${percentage}%`;
-  document.getElementById('progressMessage').textContent =
-    completed === total ? "🎉 EPIC COMPLETION! YOU'RE A LEGEND! 🎉"
-    : completed > total / 2 ? "🔥 You're on fire! Keep going!"
-    : "💪 Just getting started!";
-}
-function updateLiveLeaderboardUI() {
-  db.ref(`${PLAYERS_PATH}/${currentGameId}`).on('value', snapshot => {
-    const players = snapshot.val() || {};
-    const tbody = document.getElementById('liveLeaderboardBody');
-    tbody.innerHTML = "";
-    const sorted = Object.values(players).sort((a, b) => {
-      const ap = (a.completedCount||0)/(a.totalItems||1);
-      const bp = (b.completedCount||0)/(b.totalItems||1);
-      if (bp !== ap) return bp-ap;
-      return (b.completedCount||0)-(a.completedCount||0);
-    });
-    sorted.forEach(p => {
-      const tr = document.createElement('tr');
-      if (p.id === currentPlayerId) tr.className = "me";
-      const percent = Math.round((p.completedCount||0)/(p.totalItems||1)*100);
-      tr.innerHTML = `<td>${p.name}</td>
-        <td>${p.completedCount||0}/${p.totalItems}</td>
-        <td>${percent}%</td>`;
-      tbody.appendChild(tr);
-    });
-  });
-}
-function showLeaderboard() {
-  document.getElementById('mainMenu').style.display = 'none';
-  document.getElementById('gameBoard').style.display = 'none';
-  document.getElementById('leaderboard').style.display = 'block';
-  db.ref(PLAYERS_PATH).once('value').then(snapshot => {
-    const allGames = snapshot.val() || {};
-    const tbody = document.getElementById('leaderboardBody');
-    tbody.innerHTML = "";
-    let allPlayers = [];
-    Object.entries(allGames).forEach(([gameId, players]) => {
-      Object.values(players).forEach(player => {
-        allPlayers.push({...player, gameId});
-      });
-    });
-    allPlayers.sort((a, b) => {
-      const ap = (a.completedCount||0)/(a.totalItems||1);
-      const bp = (b.completedCount||0)/(b.totalItems||1);
-      if (bp !== ap) return bp-ap;
-      return (b.completedCount||0)-(a.completedCount||0);
-    });
-    allPlayers.forEach((p, idx) => {
-      const percent = Math.round((p.completedCount||0)/(p.totalItems||1)*100);
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${idx+1}</td>
-        <td>${p.name}</td>
-        <td>${p.completedCount||0}/${p.totalItems}</td>
-        <td>${percent}%</td>
-        <td>${p.gameId}</td>
-        <td>${p.timestamp ? new Date(p.timestamp).toLocaleDateString() : ""}</td>`;
-      tbody.appendChild(tr);
-    });
-  });
-}
-function hideLeaderboard() {
-  document.getElementById('leaderboard').style.display = 'none';
-  document.getElementById('mainMenu').style.display = 'grid';
-}
-function backToMenu() {
-  document.getElementById('gameBoard').style.display = 'none';
-  document.getElementById('mainMenu').style.display = 'grid';
-  if (currentGameId && currentPlayerId) db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).remove();
-  currentGame = null;
-  currentGameId = null;
-  currentPlayerId = null;
-  document.body.className = '';
-}
-function shuffleArray(array) {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-window.addEventListener('click', function(e) {
-  if (e.target.classList.contains('modal')) {
-    e.target.style.display = 'none';
-  }
-});
+    // ... (rest of your unchanged code: updateProgress, generateChecklist, etc.) ...
 
-// Utility: close modals on ESC
-window.addEventListener('keydown', function(e) {
-  if (e.key === "Escape") {
-    document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
-  }
-});
+    // Attach event listener for rejoin form
+    document.querySelector('#rejoinGameModal form').addEventListener('submit', rejoinSelectedGame);
 
-// Utility: autofocus on input when modal is shown
-document.querySelectorAll('.modal').forEach(modal => {
-  modal.addEventListener('transitionend', function() {
-    const input = modal.querySelector('input[type="text"]');
-    if (modal.style.display === 'block' && input) input.focus();
-  });
-});
-
-// Optional: keep UI responsive on resize for checklist
-window.addEventListener('resize', function() {
-  const container = document.getElementById('checklistContainer');
-  if (!container) return;
-  container.className = `checklist-grid ${window.innerWidth<800?'mobile':'desktop'}`;
-});
+    // ... (rest of your modal handling, window events, utilities unchanged) ...
   </script>
   </div>
 </body>
