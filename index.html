@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🟪🟩🟥🟦 V 1 PDB Multiplay</title>
+  <title>🟪🟩🟥🟦 PD Bingo Multiplayer</title>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
   <style>
@@ -93,7 +93,7 @@
     .theme-fire { --primary: #FF5722; --secondary: #FFF3E0; --accent: #D84315; }
     .theme-nature { --primary: #4CAF50; --secondary: #F1F8E9; --accent: #2E7D32; }
     .theme-royal { --primary: #9C27B0; --secondary: #F3E5F5; --accent: #7B1FA2; }
-    .theme-neon { --primary: #E91E63; --secondary: #FCE4EC; --accent: #C2185B; --accent: #C2185B; }
+    .theme-neon { --primary: #E91E63; --secondary: #FCE4EC; --accent: #C2185B; }
     @media (max-width: 768px) {
       .header h1 { font-size: 2rem; }
       .main-menu { grid-template-columns: 1fr; }
@@ -142,8 +142,39 @@
 </head>
 <body>
   <div class="container">
-    <!-- ... your main HTML ... -->
-
+    <div class="header">
+      <span class="rubik-cube">🟪🟩🟥🟦</span>
+      <h1 style="display:inline;">PD Bingo</h1>
+      <p>Challenge yourself with PD bingo boards and compete with friends in real time!</p>
+    </div>
+    <div id="mainMenu" class="main-menu">
+      <div class="menu-card" onclick="showJoinGameModal()">
+        <h3>🚀 Join an Available Game</h3>
+        <p>Pick from the list of available games and play!</p>
+        <button class="btn btn-success">Join Game</button>
+      </div>
+      <div class="menu-card" onclick="showPlayerCreateGameModal()">
+        <h3>🟦 Create Your Own Game</h3>
+        <p>Make a PD bingo game for yourself and invite others!</p>
+        <button class="btn btn-success">Create Game</button>
+      </div>
+      <div class="menu-card" onclick="showLeaderboard()">
+        <h3>🏆 Leaderboard</h3>
+        <p>See how you stack up against other players</p>
+        <button class="btn">View Scores</button>
+      </div>
+      <div class="menu-card" onclick="showAdminPanel()">
+        <h3>🛠️ Admin Panel</h3>
+        <p>Create or manage games/items (admin only)</p>
+        <button class="btn btn-danger">Admin Tools</button>
+      </div>
+    </div>
+    <div id="liveGamesSection">
+      <div style="background:white;border-radius:15px;box-shadow:0 2px 10px rgba(0,0,0,0.10);padding:18px 20px 10px 20px;">
+        <h2 style="color:#4285F4;margin-bottom:16px;text-align:center;font-size:1.3rem;">🟦 Currently Running Games & Players</h2>
+        <div id="liveGamesList"></div>
+      </div>
+    </div>
     <!-- Join Game Modal -->
     <div id="joinGameModal" class="modal">
       <div class="modal-content">
@@ -154,60 +185,41 @@
             <label for="playerNameJoin">Your Player Name:</label>
             <input type="text" id="playerNameJoin" required maxlength="20" placeholder="Enter your name">
           </div>
-          <div class="form-group">
-            <label for="playerPasswordJoin">Password:</label>
-            <input type="password" id="playerPasswordJoin" required maxlength="20" placeholder="Create a password">
-          </div>
           <button type="submit" class="btn btn-success">Join Selected Game</button>
           <button type="button" class="btn" onclick="closeModal('joinGameModal')">Cancel</button>
         </form>
-        <hr>
-        <!-- Rejoin section inside the modal -->
-        <button type="button" class="btn" onclick="showRejoinForm()">Rejoin as Existing Player</button>
-        <div id="rejoinForm" style="display:none; margin-top:12px;">
-          <div class="form-group">
-            <label for="rejoinPlayerName">Select Your Name:</label>
-            <select id="rejoinPlayerName"></select>
-          </div>
-          <div class="form-group">
-            <label for="rejoinPassword">Password:</label>
-            <input type="password" id="rejoinPassword" required maxlength="20" placeholder="Enter your password">
-          </div>
-          <button type="button" class="btn btn-success" onclick="rejoinGame()">Rejoin Game</button>
-        </div>
       </div>
     </div>
-
     <!-- Player Create Game Modal -->
     <div id="playerCreateGameModal" class="modal">
       <div class="modal-content">
-        <h2>Create a Game</h2>
+        <h2>🟦 Create Your Own Game</h2>
         <form id="playerCreateGameForm">
           <div class="form-group">
             <label for="playerGameName">Game Name:</label>
-            <input type="text" id="playerGameName" required maxlength="30" placeholder="Enter game name">
+            <input type="text" id="playerGameName" maxlength="40" required placeholder="e.g. My Custom Bingo">
           </div>
           <div class="form-group">
             <label for="playerNameCreator">Your Name:</label>
-            <input type="text" id="playerNameCreator" required maxlength="20" placeholder="Enter your name">
+            <input type="text" id="playerNameCreator" maxlength="20" required placeholder="e.g. Alice">
           </div>
           <div class="form-group">
-            <label for="playerDifficulty">Difficulty:</label>
-            <select id="playerDifficulty" required>
-              <option value="easy">Easy</option>
-              <option value="normal">Normal</option>
-              <option value="hard">Hard</option>
-              <option value="epic">Epic</option>
+            <label for="playerDifficulty">Difficulty Level:</label>
+            <select id="playerDifficulty">
+              <option value="easy">🟢 Easy (3×3 = 9 items)</option>
+              <option value="normal">🟡 Normal (4×5 = 20 items)</option>
+              <option value="hard">🟠 Hard (5×6 = 30 items)</option>
+              <option value="epic">🔴 Epic (6×6 = 36 items)</option>
             </select>
           </div>
           <div class="form-group">
             <label for="playerTheme">Theme:</label>
-            <select id="playerTheme" required>
-              <option value="classic">Classic</option>
-              <option value="fire">Fire</option>
-              <option value="nature">Nature</option>
-              <option value="royal">Royal</option>
-              <option value="neon">Neon</option>
+            <select id="playerTheme">
+              <option value="classic">💙 Classic (Blue)</option>
+              <option value="fire">🔥 Fire (Red/Orange)</option>
+              <option value="nature">🌿 Nature (Green)</option>
+              <option value="royal">👑 Royal (Purple)</option>
+              <option value="neon">⚡ Neon (Pink/Cyan)</option>
             </select>
           </div>
           <button type="submit" class="btn btn-success">Create Game</button>
@@ -215,176 +227,272 @@
         </form>
       </div>
     </div>
-
-    <!-- Add this for live games list -->
-    <div id="liveGamesSection">
-      <h2>Live Games</h2>
-      <div id="liveGamesList"></div>
+    <!-- Admin Modal for Game Creation and Item Management -->
+    <div id="adminGameModal" class="modal">
+      <div class="modal-content">
+        <h2>🛠️ Admin Panel</h2>
+        <div style="display:flex;gap:12px;margin-bottom:18px;">
+          <button type="button" class="btn" onclick="showAdminTab('createGameTab')">Create Game</button>
+          <button type="button" class="btn" onclick="showAdminTab('manageItemsTab')">Manage Items</button>
+          <button type="button" class="btn" onclick="showAdminTab('gamesListTab')">Manage Games</button>
+        </div>
+        <!-- Create Game Tab -->
+        <div id="createGameTab">
+          <form id="createGameForm">
+            <div class="form-group">
+              <label for="adminGameName">Game Name:</label>
+              <input type="text" id="adminGameName" required maxlength="40" placeholder="e.g. Staff Meeting Bingo">
+            </div>
+            <div class="form-group">
+              <label for="difficulty">Difficulty Level:</label>
+              <select id="difficulty">
+                <option value="easy">🟢 Easy (3×3 = 9 items)</option>
+                <option value="normal">🟡 Normal (4×5 = 20 items)</option>
+                <option value="hard">🟠 Hard (5×6 = 30 items)</option>
+                <option value="epic">🔴 Epic (6×6 = 36 items)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="theme">Theme:</label>
+              <select id="theme">
+                <option value="classic">💙 Classic (Blue)</option>
+                <option value="fire">🔥 Fire (Red/Orange)</option>
+                <option value="nature">🌿 Nature (Green)</option>
+                <option value="royal">👑 Royal (Purple)</option>
+                <option value="neon">⚡ Neon (Pink/Cyan)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-success">Create Game</button>
+          </form>
+        </div>
+        <!-- Manage Items Tab -->
+        <div id="manageItemsTab" style="display:none;">
+          <form id="addItemForm" style="margin-bottom:20px;">
+            <div class="form-group">
+              <label for="newItemInput">Add New Bingo Item:</label>
+              <input type="text" id="newItemInput" maxlength="150" placeholder="e.g. Someone's phone goes off" required>
+            </div>
+            <button type="submit" class="btn btn-success">Add Item</button>
+          </form>
+          <h3>Current Items</h3>
+          <ul id="itemList" style="max-height:220px;overflow:auto;padding-left:18px;"></ul>
+          <button class="btn btn-danger" style="margin-top:12px;" onclick="resetAllItems()">Reset Items to Default</button>
+        </div>
+        <!-- Manage Games/Players Tab -->
+        <div id="gamesListTab" style="display:none;">
+          <h3>Existing Games</h3>
+          <div id="adminGamesList"></div>
+        </div>
+        <button type="button" class="btn" style="margin-top: 20px;" onclick="closeModal('adminGameModal')">Close Admin Panel</button>
+      </div>
     </div>
-
-    <!-- Add this for admin create game form -->
-    <form id="createGameForm" style="display:none">
-      <input type="text" name="gameName" placeholder="Game Name">
-      <button type="submit">Create</button>
-    </form>
-    <form id="addItemForm" style="display:none">
-      <input type="text" name="item" placeholder="Item">
-      <button type="submit">Add</button>
-    </form>
-
-    <!-- ... any other HTML ... -->
-  </div>
+    <div id="gameBoard" class="game-board">
+      <div class="game-header">
+        <h2 id="gameTitle">Your PD Bingo Challenge</h2>
+        <p id="gameSubtitle">Complete all items to achieve victory!</p>
+      </div>
+      <div class="progress-section">
+        <div class="progress-stats">
+          <div class="stat">
+            <div class="stat-value" id="currentScore">0</div>
+            <div class="stat-label">Score</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="totalItems">0</div>
+            <div class="stat-label">Total Items</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="completionPercent">0%</div>
+            <div class="stat-label">Complete</div>
+          </div>
+        </div>
+        <div class="progress-message" id="progressMessage">💪 Let's get started!</div>
+      </div>
+      <div id="liveLeaderboard" class="leaderboard" style="margin-bottom:15px;">
+        <h2 style="font-size:1.2rem;">Live Player Progress</h2>
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>👤 Player</th>
+              <th>⚡ Score</th>
+              <th>📈 Progress</th>
+            </tr>
+          </thead>
+          <tbody id="liveLeaderboardBody"></tbody>
+        </table>
+      </div>
+      <div id="checklistContainer" class="checklist-grid"></div>
+      <button class="btn" onclick="backToMenu()">Back to Menu</button>
+    </div>
+    <div id="leaderboard" class="leaderboard" style="display: none;">
+      <h2>🏆 Player Leaderboard</h2>
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>🏆 Rank</th>
+            <th>👤 Player</th>
+            <th>⚡ Score</th>
+            <th>📈 Progress</th>
+            <th>🕹️ Game</th>
+            <th>📅 Joined</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardBody"></tbody>
+      </table>
+      <button class="btn" onclick="hideLeaderboard()" style="margin-top: 20px;">Back to Menu</button>
+    </div>
   <script>
-    // Firebase config and constants
-    const firebaseConfig = {
-      apiKey: "AIzaSyDeQPS8fkc6uH9shQye35At98Fa5V62Z7A",
-      authDomain: "bingo-e3517.firebaseapp.com",
-      databaseURL: "https://bingo-e3517-default-rtdb.firebaseio.com",
-      projectId: "bingo-e3517",
-      storageBucket: "bingo-e3517.appspot.com",
-      messagingSenderId: "338765367468",
-      appId: "1:338765367468:web:9d539fe8e1b5351c123709",
-      measurementId: "G-VFXRMS6LN7"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    // === PD Bingo Multiplayer App JavaScript ===
 
-    // FULL DEFAULT_ITEMS array (100+ elements, unabridged)
-    const DEFAULT_ITEMS = [
-      "The Wi-Fi password is written on a whiteboard",
-      "Key concept defined early in the session",
-      "Presenter’s family photo",
-      "Awkward mixer",
-      "You are asked to write something on post-it notes",
-      "Personal anecdote involving presenter’s children",
-      "You are asked to share the ideas of someone you have talked to",
-      "An evaluation sheet to finish the day",
-      "A takeaway task to do at school",
-      "Presenter will say, “Chat with the person next to you about what you’re thinking about.”",
-      "Awkward silence",
-      "You are asked to share an example of practice from your school",
-      "Whole group sharing",
-      "Presenter uses the word “mahi” or “kai.”",
-      "A title on the PowerPoint ends in a question mark",
-      "Someone leaves while the presenter is talking to use the toilet",
-      "Presenter affirms someone’s emotions or feelings",
-      "Presenter stands with hands on hips",
-      "Presenter moves closer to your group, and you immediately pretend to be talking about what you were asked to",
-      "Presenter quotes an academic",
-      "Presenter invites you to agree or disagree with an idea",
-      "Event would be better with air conditioning",
-      "Presenter “parks” a question",
-      "Badly pronounced te reo whakataukī",
-      "Presenter has a brown A3 bit of paper with “Questions” written on it pinned up in an obscure corner of the room",
-      "Someone gets overly passionate or emotional",
-      "Finish early",
-      "Presenter will say something to the effect of, “You may have seen this before,” or “I may have shared this before.”",
-      "The word wharepaku is used",
-      "Someone is late back from lunch and awkwardly apologises or sneaks in",
-      "Someone is sitting near a power outlet to charge their laptop",
-      "Asked to share back a “key message”",
-      "PowerPoint contains a graph",
-      "The speaker is interrupted by a school bell",
-      "Presenter gives out pens or coloured markers",
-      "Presenter gives an over-the-top fake smile",
-      "Presenter touches the fingers of each hand together",
-      "A post-it fails to stay where it was placed",
-      "Someone says something to the effect of, “I’ll share the slides with you later.”",
-      "Someone takes a photograph of the slides from a ridiculous distance that they will never look at again",
-      "You see someone on social media",
-      "The presenter is wearing an overly flamboyant item of clothing showing how interesting and creative they are",
-      "Presenter says, “I’m not an expert.”",
-      "Presenter has oversized jewellery",
-      "Te Aroha is sung",
-      "PowerPoint has a GIF",
-      "There will be a technical difficulty, and the presenter will make awkward jokes about it",
-      "Someone will leave early but in an awkward way drawing too much attention to themselves",
-      "A continuum is used in some way",
-      "Two participants whisper incessantly",
-      "PD starts with a video to get everyone in the mood",
-      "Teachers (who should know better) don’t shut up when they should",
-      "Someone leaves early to pick up the kids",
-      "There is a task to “get you thinking.”",
-      "PowerPoint contains a bullet-pointed list with more than four bullet points",
-      "A title on the PowerPoint ends in an exclamation mark",
-      "Presenter uses a phrase that could be interpreted in a dirty way, e.g., “Go slow, go deep, do it well...”",
-      "The speaker makes a circular gesture with their hands to show “the whole” or the breadth or size of something",
-      "The sound does not work on a video",
-      "The speaker points at an audience member",
-      "Someone thanks the presenter and may give them a gift as a token of appreciation for an appearance they are probably being paid quite well for",
-      "The presenter displays a matrix",
-      "The presenter displays some text that is far too small to read but carries on like it’s clearly legible",
-      "The presenter displays a slide and then says, “Let’s just skip that one.”",
-      "You hear a condescending repetition of something that has already been said",
-      "Someone leaves to get more chairs",
-      "Participant vehemently disagrees with presenter on a relatively minor point that didn’t really need extra discussion",
-      "Presenter makes a reference to teacher workload",
-      "One participant starts talking more than the presenter",
-      "One participant sits on their computer and does not interact with anyone else",
-      "Lunch is provided",
-      "A primary teacher is overexcited and energetic",
-      "A secondary school teacher is cool and aloof",
-      "Management flits in and out during the day",
-      "Agree to have a shorter lunch break but get to finish early",
-      "Presenter has distinctive shoes",
-      "Presenter’s joke falls flat",
-      "Presenter says something to the effect of, “Please eat up; we don’t want anything left over.”",
-      "Presenter says something to the effect of, “What are you going to take back to the classroom?”",
-      "A participant keeps talking and acting like a god-damn hippy",
-      "A participant rolls their eyes when someone else keeps acting like a god-damn hippy",
-      "Someone identifies time as a reason for not implementing a change",
-      "Someone identifies money as a reason for not implementing a change",
-      "Presenter uses upbeat music to make the event more fun and engaging",
-      "A word on the PowerPoint is written in ALL CAPS for effect",
-      "Presenter includes a cartoon/joke on the PowerPoint as a brain break",
-      "The term “blue sky thinking” is used",
-      "The presenter shows a slide with a lot of text and says, “I’ll just give you a moment to read that.”",
-      "Presenter describes learning with an interesting metaphor",
-      "A question directed to someone who was clearly off task",
-      "Presenter brandishes a pen like a wand or a sword",
-      "Presenter shares a story or picture of a pet",
-      "Presenter appears visibly nervous",
-      "Someone cries",
-      "Presenter says something to the effect of, “Now that you have had some lunch...”",
-      "Presenter references themselves",
-      "Presenter gets someone’s name wrong",
-      "A wardrobe malfunction",
-      "Someone’s phone goes off",
-      "Participant doodles",
-      "Presenter asks a question and gets no response",
-      "Someone complains",
-      "Participant asks for a copy of the slides",
-      "Presenter apologises",
-      "Someone laughs way too loudly",
-      "Someone wears a distracting or unusual outfit",
-      "Presenter uses an overly complex diagram",
-      "Someone questions the relevance of the topic"
-    ];
+// Firebase config and constants
+const firebaseConfig = {
+  apiKey: "AIzaSyDeQPS8fkc6uH9shQye35At98Fa5V62Z7A",
+  authDomain: "bingo-e3517.firebaseapp.com",
+  databaseURL: "https://bingo-e3517-default-rtdb.firebaseio.com",
+  projectId: "bingo-e3517",
+  storageBucket: "bingo-e3517.appspot.com",
+  messagingSenderId: "338765367468",
+  appId: "1:338765367468:web:9d539fe8e1b5351c123709",
+  measurementId: "G-VFXRMS6LN7"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-    const difficultySettings = {
-      easy: { name: 'Easy', rows: 3, cols: 3, total: 9, emoji: '🟢' },
-      normal: { name: 'Normal', rows: 4, cols: 5, total: 20, emoji: '🟡' },
-      hard: { name: 'Hard', rows: 5, cols: 6, total: 30, emoji: '🟠' },
-      epic: { name: 'Epic', rows: 6, cols: 6, total: 36, emoji: '🔴' }
-    };
-    const themeSettings = {
-      classic: { name: 'Classic', primary: '#4285F4', secondary: '#E8F0FE', accent: '#1A73E8', emoji: '💙' },
-      fire: { name: 'Fire', primary: '#FF5722', secondary: '#FFF3E0', accent: '#D84315', emoji: '🔥' },
-      nature: { name: 'Nature', primary: '#4CAF50', secondary: '#F1F8E9', accent: '#2E7D32', emoji: '🌿' },
-      royal: { name: 'Royal', primary: '#9C27B0', secondary: '#F3E5F5', accent: '#7B1FA2', emoji: '👑' },
-      neon: { name: 'Neon', primary: '#E91E63', secondary: '#FCE4EC', accent: '#C2185B', emoji: '⚡' }
-    };
+const DEFAULT_ITEMS = [
+  "The Wi-Fi password is written on a whiteboard",
+  "Key concept defined early in the session",
+  "Presenter’s family photo",
+  "Awkward mixer",
+  "You are asked to write something on post-it notes",
+  "Personal anecdote involving presenter’s children",
+  "You are asked to share the ideas of someone you have talked to",
+  "An evaluation sheet to finish the day",
+  "A takeaway task to do at school",
+  "Presenter will say, “Chat with the person next to you about what you’re thinking about.”",
+  "Awkward silence",
+  "You are asked to share an example of practice from your school",
+  "Whole group sharing",
+  "Presenter uses the word “mahi” or “kai.”",
+  "A title on the PowerPoint ends in a question mark",
+  "Someone leaves while the presenter is talking to use the toilet",
+  "Presenter affirms someone’s emotions or feelings",
+  "Presenter stands with hands on hips",
+  "Presenter moves closer to your group, and you immediately pretend to be talking about what you were asked to",
+  "Presenter quotes an academic",
+  "Presenter invites you to agree or disagree with an idea",
+  "Event would be better with air conditioning",
+  "Presenter “parks” a question",
+  "Badly pronounced te reo whakataukī",
+  "Presenter has a brown A3 bit of paper with “Questions” written on it pinned up in an obscure corner of the room",
+  "Someone gets overly passionate or emotional",
+  "Finish early",
+  "Presenter will say something to the effect of, “You may have seen this before,” or “I may have shared this before.”",
+  "The word wharepaku is used",
+  "Someone is late back from lunch and awkwardly apologises or sneaks in",
+  "Someone is sitting near a power outlet to charge their laptop",
+  "Asked to share back a “key message”",
+  "PowerPoint contains a graph",
+  "The speaker is interrupted by a school bell",
+  "Presenter gives out pens or coloured markers",
+  "Presenter gives an over-the-top fake smile",
+  "Presenter touches the fingers of each hand together",
+  "A post-it fails to stay where it was placed",
+  "Someone says something to the effect of, “I’ll share the slides with you later.”",
+  "Someone takes a photograph of the slides from a ridiculous distance that they will never look at again",
+  "You see someone on social media",
+  "The presenter is wearing an overly flamboyant item of clothing showing how interesting and creative they are",
+  "Presenter says, “I’m not an expert.”",
+  "Presenter has oversized jewellery",
+  "Te Aroha is sung",
+  "PowerPoint has a GIF",
+  "There will be a technical difficulty, and the presenter will make awkward jokes about it",
+  "Someone will leave early but in an awkward way drawing too much attention to themselves",
+  "A continuum is used in some way",
+  "Two participants whisper incessantly",
+  "PD starts with a video to get everyone in the mood",
+  "Teachers (who should know better) don’t shut up when they should",
+  "Someone leaves early to pick up the kids",
+  "There is a task to “get you thinking.”",
+  "PowerPoint contains a bullet-pointed list with more than four bullet points",
+  "A title on the PowerPoint ends in an exclamation mark",
+  "Presenter uses a phrase that could be interpreted in a dirty way, e.g., “Go slow, go deep, do it well...”",
+  "The speaker makes a circular gesture with their hands to show “the whole” or the breadth or size of something",
+  "The sound does not work on a video",
+  "The speaker points at an audience member",
+  "Someone thanks the presenter and may give them a gift as a token of appreciation for an appearance they are probably being paid quite well for",
+  "The presenter displays a matrix",
+  "The presenter displays some text that is far too small to read but carries on like it’s clearly legible",
+  "The presenter displays a slide and then says, “Let’s just skip that one.”",
+  "You hear a condescending repetition of something that has already been said",
+  "Someone leaves to get more chairs",
+  "Participant vehemently disagrees with presenter on a relatively minor point that didn’t really need extra discussion",
+  "Presenter makes a reference to teacher workload",
+  "One participant starts talking more than the presenter",
+  "One participant sits on their computer and does not interact with anyone else",
+  "Lunch is provided",
+  "A primary teacher is overexcited and energetic",
+  "A secondary school teacher is cool and aloof",
+  "Management flits in and out during the day",
+  "Agree to have a shorter lunch break but get to finish early",
+  "Presenter has distinctive shoes",
+  "Presenter’s joke falls flat",
+  "Presenter says something to the effect of, “Please eat up; we don’t want anything left over.”",
+  "Presenter says something to the effect of, “What are you going to take back to the classroom?”",
+  "A participant keeps talking and acting like a god-damn hippy",
+  "A participant rolls their eyes when someone else keeps acting like a god-damn hippy",
+  "Someone identifies time as a reason for not implementing a change",
+  "Someone identifies money as a reason for not implementing a change",
+  "Presenter uses upbeat music to make the event more fun and engaging",
+  "A word on the PowerPoint is written in ALL CAPS for effect",
+  "Presenter includes a cartoon/joke on the PowerPoint as a brain break",
+  "The term “blue sky thinking” is used",
+  "The presenter shows a slide with a lot of text and says, “I’ll just give you a moment to read that.”",
+  "Presenter describes learning with an interesting metaphor",
+  "A question directed to someone who was clearly off task",
+  "Presenter brandishes a pen like a wand or a sword",
+  "Presenter shares a story or picture of a pet",
+  "Presenter appears visibly nervous",
+  "Someone cries",
+  "Presenter says something to the effect of, “Now that you have had some lunch...”",
+  "Presenter references themselves",
+  "Presenter gets someone’s name wrong",
+  "A wardrobe malfunction",
+  "Someone’s phone goes off",
+  "Participant doodles",
+  "Presenter asks a question and gets no response",
+  "Someone complains",
+  "Participant asks for a copy of the slides",
+  "Presenter apologises",
+  "Someone laughs way too loudly",
+  "Someone wears a distracting or unusual outfit",
+  "Presenter uses an overly complex diagram",
+  "Someone questions the relevance of the topic"
+];
 
-    const GAMES_PATH = "bingo-multiplayer/games";
-    const PLAYERS_PATH = "bingo-multiplayer/players";
-    const ITEM_PATH = "bingo-multiplayer/items";
-    let allItems = [];
-    let currentGame = null;
-    let currentGameId = null;
-    let currentPlayerId = null;
-    let currentPlayerName = null;
+const difficultySettings = {
+  easy: { name: 'Easy', rows: 3, cols: 3, total: 9, emoji: '🟢' },
+  normal: { name: 'Normal', rows: 4, cols: 5, total: 20, emoji: '🟡' },
+  hard: { name: 'Hard', rows: 5, cols: 6, total: 30, emoji: '🟠' },
+  epic: { name: 'Epic', rows: 6, cols: 6, total: 36, emoji: '🔴' }
+};
+const themeSettings = {
+  classic: { name: 'Classic', primary: '#4285F4', secondary: '#E8F0FE', accent: '#1A73E8', emoji: '💙' },
+  fire: { name: 'Fire', primary: '#FF5722', secondary: '#FFF3E0', accent: '#D84315', emoji: '🔥' },
+  nature: { name: 'Nature', primary: '#4CAF50', secondary: '#F1F8E9', accent: '#2E7D32', emoji: '🌿' },
+  royal: { name: 'Royal', primary: '#9C27B0', secondary: '#F3E5F5', accent: '#7B1FA2', emoji: '👑' },
+  neon: { name: 'Neon', primary: '#E91E63', secondary: '#FCE4EC', accent: '#C2185B', emoji: '⚡' }
+};
 
-    // Live Games/Players display (home page)
+const GAMES_PATH = "bingo-multiplayer/games";
+const PLAYERS_PATH = "bingo-multiplayer/players";
+const ITEM_PATH = "bingo-multiplayer/items";
+let allItems = [];
+let currentGame = null;
+let currentGameId = null;
+let currentPlayerId = null;
+let currentPlayerName = null;
+
+// Live Games/Players display (home page)
 function updateLiveGamesSection() {
   const gamesListDiv = document.getElementById('liveGamesList');
   db.ref(GAMES_PATH).once('value').then(gSnap => {
@@ -632,16 +740,13 @@ function closeModal(modalId) {
 function joinSelectedGame(e) {
   e.preventDefault();
   const playerName = document.getElementById('playerNameJoin').value.trim();
-  const playerPassword = document.getElementById('playerPasswordJoin').value.trim();
   const gameId = (document.querySelector('input[name="gameSelect"]:checked')||{}).value;
   if (!playerName) return alert("Please enter your name!");
-  if (!playerPassword) return alert("Please enter a password!");
   if (!gameId) return alert("Please select a game!");
-  joinGame(gameId, playerName, playerPassword);
+  joinGame(gameId, playerName);
   closeModal('joinGameModal');
 }
-
-function joinGame(gameId, playerName, playerPassword) {
+function joinGame(gameId, playerName) {
   db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(snapshot => {
     const game = snapshot.val();
     if (!game) return alert("Game not found!");
@@ -649,11 +754,9 @@ function joinGame(gameId, playerName, playerPassword) {
     currentGameId = gameId;
     currentPlayerName = playerName;
     currentPlayerId = playerName.replace(/\W/g,"") + "_" + Date.now();
-    // Save password (in production, hash it!)
     db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).set({
       id: currentPlayerId,
       name: playerName,
-      password: playerPassword, // Store password
       completedCount: 0,
       totalItems: game.items.length,
       timestamp: Date.now()
@@ -661,7 +764,6 @@ function joinGame(gameId, playerName, playerPassword) {
     showGameBoard();
   });
 }
-
 function showGameBoard() {
   document.getElementById('mainMenu').style.display = 'none';
   document.getElementById('leaderboard').style.display = 'none';
@@ -823,7 +925,6 @@ window.addEventListener('resize', function() {
   container.className = `checklist-grid ${window.innerWidth<800?'mobile':'desktop'}`;
 });
   </script>
+  </div>
 </body>
 </html>
-
-
