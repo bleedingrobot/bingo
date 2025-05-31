@@ -1,3 +1,4 @@
+```html name=multiplayer-bingo.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -296,9 +297,444 @@
     let currentPlayerId = null;
     let currentPlayerName = null;
 
-    // --- JS FUNCTIONALITY: All code from previous chunks here, UNABRIDGED ---
-    // Please copy ALL the JS logic from the previous chunked messages, in order, into this <script> tag.
-    // The full file will function as a standalone multiplayer bingo app.
+    // Live Games/Players display (home page)
+function updateLiveGamesSection() {
+  const gamesListDiv = document.getElementById('liveGamesList');
+  db.ref(GAMES_PATH).once('value').then(gSnap => {
+    const games = gSnap.val() || {};
+    db.ref(PLAYERS_PATH).once('value').then(pSnap => {
+      const allPlayers = pSnap.val() || {};
+      let html = "";
+      if (Object.keys(games).length === 0) {
+        gamesListDiv.innerHTML = "<em>No games currently running! Ask an admin to create a game.</em>";
+        return;
+      }
+      Object.values(games).forEach(game => {
+        if (!game.isOpen) return;
+        const players = (allPlayers[game.id] ? Object.values(allPlayers[game.id]) : []);
+        html += `<div style="margin-bottom:18px;">
+          <b>${game.name}</b> <span style="color:#888;font-size:0.95em;">(${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name})</span><br>
+          <span style="color:#555;">Players: ${
+            players.length === 0
+              ? '<em>none yet</em>'
+              : players.map(p => `<span style="background:#E8F0FE;border-radius:5px;padding:2px 8px;margin-right:5px;">${p.name}</span>`).join('')
+          }</span>
+        </div>`;
+      });
+      if (!html) html = "<em>No games currently running! Ask an admin to create a game.</em>";
+      gamesListDiv.innerHTML = html;
+    });
+  });
+}
+updateLiveGamesSection();
+setInterval(updateLiveGamesSection, 10000);
+
+// Admin manage games tab
+function renderAdminGamesList() {
+  const target = document.getElementById('adminGamesList');
+  target.innerHTML = "Loading...";
+  db.ref(GAMES_PATH).once('value').then(gSnap => {
+    const games = gSnap.val() || {};
+    db.ref(PLAYERS_PATH).once('value').then(pSnap => {
+      const allPlayers = pSnap.val() || {};
+      if (Object.keys(games).length === 0) {
+        target.innerHTML = "<em>No games found</em>";
+        return;
+      }
+      let html = "";
+      Object.values(games).forEach(game => {
+        const players = (allPlayers[game.id] ? Object.values(allPlayers[game.id]) : []);
+        html += `<div class="game-admin-list">
+          <b>${game.name}</b> <span style="color:#888;">(${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name})</span>
+          <div class="players">Players: ${
+            players.length === 0
+              ? '<em>none</em>'
+              : players.map(p => `<span style="background:#E8F0FE;border-radius:5px;padding:2px 8px;margin-right:5px;">${p.name}</span>`).join('')
+          }</div>
+          <div class="admin-btn-row">
+            <button class="btn btn-danger" onclick="adminDeleteGame('${game.id}')">Delete Game</button>
+            <button class="btn btn-danger" onclick="adminResetPlayers('${game.id}')">Remove All Players</button>
+          </div>
+        </div>`;
+      });
+      target.innerHTML = html;
+    });
+  });
+}
+function adminDeleteGame(gameId) {
+  if (!confirm("Are you sure you want to delete this game and all associated player data?")) return;
+  db.ref(GAMES_PATH + "/" + gameId).remove().then(()=>{
+    db.ref(PLAYERS_PATH + "/" + gameId).remove().then(renderAdminGamesList);
+  });
+}
+function adminResetPlayers(gameId) {
+  if (!confirm("Are you sure you want to remove all players from this game?")) return;
+  db.ref(PLAYERS_PATH + "/" + gameId).remove().then(renderAdminGamesList);
+}
+
+function showAdminTab(tabId) {
+  document.getElementById('createGameTab').style.display = tabId === 'createGameTab' ? 'block' : 'none';
+  document.getElementById('manageItemsTab').style.display = tabId === 'manageItemsTab' ? 'block' : 'none';
+  document.getElementById('gamesListTab').style.display = tabId === 'gamesListTab' ? 'block' : 'none';
+  if (tabId === 'gamesListTab') renderAdminGamesList();
+  if (tabId === 'manageItemsTab') fetchItemsAndRenderList();
+}
+function fetchItemsAndRenderList() {
+  db.ref(ITEM_PATH).once('value').then(snap => {
+    if (!snap.exists()) {
+      db.ref(ITEM_PATH).set(DEFAULT_ITEMS).then(() => {
+        allItems = [...DEFAULT_ITEMS];
+        renderItemList();
+      });
+    } else {
+      allItems = snap.val();
+      renderItemList();
+    }
+  });
+}
+function renderItemList() {
+  const ul = document.getElementById('itemList');
+  if (!ul) return;
+  ul.innerHTML = "";
+  allItems.forEach((item, idx) => {
+    const li = document.createElement('li');
+    li.textContent = item;
+    li.style.display = "flex";
+    li.style.alignItems = "center";
+    li.style.justifyContent = "space-between";
+    li.style.gap = "8px";
+    li.innerHTML += ` <button onclick="removeItem(${idx})" style="margin-left:14px;background:#e74c3c;color:white;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;">Remove</button>`;
+    ul.appendChild(li);
+  });
+}
+function addItemToDB(e) {
+  e.preventDefault();
+  const input = document.getElementById('newItemInput');
+  const val = input.value.trim();
+  if (!val) return alert("Enter an item!");
+  if (allItems.includes(val)) return alert("That item already exists!");
+  allItems.push(val);
+  db.ref(ITEM_PATH).set(allItems).then(() => {
+    input.value = "";
+    renderItemList();
+    alert("Item added!");
+  });
+}
+function removeItem(idx) {
+  if (!confirm("Remove this item?")) return;
+  allItems.splice(idx, 1);
+  db.ref(ITEM_PATH).set(allItems).then(renderItemList);
+}
+function resetAllItems() {
+  if (!confirm("Reset all items to original defaults? This will remove all additions and deletions.")) return;
+  db.ref(ITEM_PATH).set(DEFAULT_ITEMS).then(() => {
+    allItems = [...DEFAULT_ITEMS];
+    renderItemList();
+  });
+}
+function createGameFromAdmin(e) {
+  e.preventDefault();
+  const gameName = document.getElementById('adminGameName').value.trim();
+  const difficulty = document.getElementById('difficulty').value;
+  const theme = document.getElementById('theme').value;
+  if (!gameName) {
+    alert("Please enter a game name!");
+    return;
+  }
+  db.ref(ITEM_PATH).once('value').then(snap => {
+    const itemsArr = snap.val() || DEFAULT_ITEMS;
+    const diff = difficultySettings[difficulty];
+    const thm = themeSettings[theme];
+    const selectedItems = shuffleArray([...itemsArr]).slice(0, diff.total);
+    const gameId = gameName.replace(/\W/g,"") + "_" + Date.now();
+    db.ref(`${GAMES_PATH}/${gameId}`).set({
+      id: gameId,
+      name: gameName,
+      difficulty: diff,
+      difficultyKey: difficulty,
+      theme: thm,
+      themeKey: theme,
+      items: selectedItems,
+      created: new Date().toISOString(),
+      isOpen: true
+    }).then(()=>{
+      alert("Game created!");
+      closeModal('adminGameModal');
+    });
+  });
+}
+document.getElementById('createGameForm').addEventListener('submit', createGameFromAdmin);
+document.getElementById('addItemForm').addEventListener('submit', addItemToDB);
+
+function showAdminPanel() {
+  const password = prompt("Enter admin password:");
+  if (password !== "admin123") {
+    alert("❌ Incorrect password!");
+    return;
+  }
+  showAdminTab('createGameTab');
+  document.getElementById('adminGameModal').style.display = 'block';
+  fetchItemsAndRenderList();
+}
+
+// --- Player Create Game Modal logic ---
+function showPlayerCreateGameModal() {
+  document.getElementById('playerCreateGameModal').style.display = 'block';
+}
+document.getElementById('playerCreateGameForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const gameName = document.getElementById('playerGameName').value.trim();
+  const playerName = document.getElementById('playerNameCreator').value.trim();
+  const difficulty = document.getElementById('playerDifficulty').value;
+  const theme = document.getElementById('playerTheme').value;
+  if (!gameName) return alert("Please enter a game name!");
+  if (!playerName) return alert("Please enter your name!");
+  db.ref("bingo-multiplayer/items").once('value').then(snap => {
+    const itemsArr = snap.val() || DEFAULT_ITEMS;
+    const diff = difficultySettings[difficulty];
+    const thm = themeSettings[theme];
+    const selectedItems = shuffleArray([...itemsArr]).slice(0, diff.total);
+    const gameId = gameName.replace(/\W/g,"") + "_" + Date.now();
+    db.ref(`bingo-multiplayer/games/${gameId}`).set({
+      id: gameId,
+      name: gameName,
+      difficulty: diff,
+      difficultyKey: difficulty,
+      theme: thm,
+      themeKey: theme,
+      items: selectedItems,
+      created: new Date().toISOString(),
+      isOpen: true
+    }).then(()=>{
+      // Creator is first player - auto-join game
+      const playerId = playerName.replace(/\W/g,"") + "_" + Date.now();
+      db.ref(`bingo-multiplayer/players/${gameId}/${playerId}`).set({
+        id: playerId,
+        name: playerName,
+        completedCount: 0,
+        totalItems: selectedItems.length,
+        timestamp: Date.now()
+      });
+      closeModal('playerCreateGameModal');
+      // Show the game immediately as if joined
+      joinGame(gameId, playerName);
+    });
+  });
+});
+
+// --- Join Game logic ---
+function showJoinGameModal() {
+  document.getElementById('joinGameModal').style.display = 'block';
+  const listDiv = document.getElementById('availableGamesList');
+  listDiv.innerHTML = "Loading games...";
+  db.ref(GAMES_PATH).once('value').then(snapshot => {
+    const games = snapshot.val() || {};
+    let html = "";
+    Object.values(games).filter(g=>g.isOpen).forEach(game => {
+      html += `<div>
+        <input type="radio" name="gameSelect" value="${game.id}" id="game_radio_${game.id}" required>
+        <label for="game_radio_${game.id}"><b>${game.name}</b> - ${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name} [${game.items.length} items]</label>
+      </div>`;
+    });
+    listDiv.innerHTML = html || "<div>No games available. Ask an admin to create one!</div>";
+  });
+}
+function closeModal(modalId) {
+  document.getElementById(modalId).style.display = 'none';
+}
+function joinSelectedGame(e) {
+  e.preventDefault();
+  const playerName = document.getElementById('playerNameJoin').value.trim();
+  const gameId = (document.querySelector('input[name="gameSelect"]:checked')||{}).value;
+  if (!playerName) return alert("Please enter your name!");
+  if (!gameId) return alert("Please select a game!");
+  joinGame(gameId, playerName);
+  closeModal('joinGameModal');
+}
+function joinGame(gameId, playerName) {
+  db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(snapshot => {
+    const game = snapshot.val();
+    if (!game) return alert("Game not found!");
+    currentGame = game;
+    currentGameId = gameId;
+    currentPlayerName = playerName;
+    currentPlayerId = playerName.replace(/\W/g,"") + "_" + Date.now();
+    db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).set({
+      id: currentPlayerId,
+      name: playerName,
+      completedCount: 0,
+      totalItems: game.items.length,
+      timestamp: Date.now()
+    });
+    showGameBoard();
+  });
+}
+
+function showGameBoard() {
+  document.getElementById('mainMenu').style.display = 'none';
+  document.getElementById('leaderboard').style.display = 'none';
+  document.getElementById('gameBoard').style.display = 'block';
+  document.body.className = `theme-${currentGame.themeKey}`;
+  document.getElementById('gameTitle').textContent =
+    `🟦 ${currentGame.name}`;
+  document.getElementById('gameSubtitle').textContent =
+    `${currentGame.difficulty.emoji} ${currentGame.difficulty.name} • ${currentGame.theme.emoji} ${currentGame.theme.name} • ${currentGame.items.length} items`;
+  currentGame.completed = Array(currentGame.items.length).fill(false);
+  currentGame.completedCount = 0;
+  updateProgress();
+  generateChecklist();
+  updateLiveLeaderboardUI();
+}
+function generateChecklist() {
+  const container = document.getElementById('checklistContainer');
+  container.innerHTML = '';
+  container.className = `checklist-grid desktop`;
+  currentGame.items.forEach((item, idx) => {
+    const itemDiv = document.createElement('div');
+    itemDiv.className = `checklist-item${currentGame.completed[idx] ? ' completed' : ''}`;
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = `item-${idx}`;
+    checkbox.checked = currentGame.completed[idx];
+    checkbox.addEventListener('change', () => toggleItem(idx));
+    const label = document.createElement('label');
+    label.htmlFor = `item-${idx}`;
+    label.textContent = `${idx + 1}. ${item}`;
+    itemDiv.appendChild(checkbox);
+    itemDiv.appendChild(label);
+    container.appendChild(itemDiv);
+  });
+}
+function toggleItem(idx) {
+  currentGame.completed[idx] = !currentGame.completed[idx];
+  currentGame.completedCount = currentGame.completed.filter(Boolean).length;
+  db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).update({
+    completedCount: currentGame.completedCount,
+    timestamp: Date.now()
+  });
+  updateProgress();
+  generateChecklist();
+}
+function updateProgress() {
+  const completed = currentGame.completedCount;
+  const total = currentGame.items.length;
+  const percentage = Math.round((completed / total) * 100);
+  document.getElementById('currentScore').textContent = completed;
+  document.getElementById('totalItems').textContent = total;
+  document.getElementById('completionPercent').textContent = `${percentage}%`;
+  document.getElementById('progressMessage').textContent =
+    completed === total ? "🎉 EPIC COMPLETION! YOU'RE A LEGEND! 🎉"
+    : completed > total / 2 ? "🔥 You're on fire! Keep going!"
+    : "💪 Just getting started!";
+}
+function updateLiveLeaderboardUI() {
+  db.ref(`${PLAYERS_PATH}/${currentGameId}`).on('value', snapshot => {
+    const players = snapshot.val() || {};
+    const tbody = document.getElementById('liveLeaderboardBody');
+    tbody.innerHTML = "";
+    const sorted = Object.values(players).sort((a, b) => {
+      const ap = (a.completedCount||0)/(a.totalItems||1);
+      const bp = (b.completedCount||0)/(b.totalItems||1);
+      if (bp !== ap) return bp-ap;
+      return (b.completedCount||0)-(a.completedCount||0);
+    });
+    sorted.forEach(p => {
+      const tr = document.createElement('tr');
+      if (p.id === currentPlayerId) tr.className = "me";
+      const percent = Math.round((p.completedCount||0)/(p.totalItems||1)*100);
+      tr.innerHTML = `<td>${p.name}</td>
+        <td>${p.completedCount||0}/${p.totalItems}</td>
+        <td>${percent}%</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+}
+function showLeaderboard() {
+  document.getElementById('mainMenu').style.display = 'none';
+  document.getElementById('gameBoard').style.display = 'none';
+  document.getElementById('leaderboard').style.display = 'block';
+  db.ref(PLAYERS_PATH).once('value').then(snapshot => {
+    const allGames = snapshot.val() || {};
+    const tbody = document.getElementById('leaderboardBody');
+    tbody.innerHTML = "";
+    let allPlayers = [];
+    Object.entries(allGames).forEach(([gameId, players]) => {
+      Object.values(players).forEach(player => {
+        allPlayers.push({...player, gameId});
+      });
+    });
+    allPlayers.sort((a, b) => {
+      const ap = (a.completedCount||0)/(a.totalItems||1);
+      const bp = (b.completedCount||0)/(b.totalItems||1);
+      if (bp !== ap) return bp-ap;
+      return (b.completedCount||0)-(a.completedCount||0);
+    });
+    allPlayers.forEach((p, idx) => {
+      const percent = Math.round((p.completedCount||0)/(p.totalItems||1)*100);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${idx+1}</td>
+        <td>${p.name}</td>
+        <td>${p.completedCount||0}/${p.totalItems}</td>
+        <td>${percent}%</td>
+        <td>${p.gameId}</td>
+        <td>${p.timestamp ? new Date(p.timestamp).toLocaleDateString() : ""}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+}
+function hideLeaderboard() {
+  document.getElementById('leaderboard').style.display = 'none';
+  document.getElementById('mainMenu').style.display = 'grid';
+}
+function backToMenu() {
+  document.getElementById('gameBoard').style.display = 'none';
+  document.getElementById('mainMenu').style.display = 'grid';
+  if (currentGameId && currentPlayerId) db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).remove();
+  currentGame = null;
+  currentGameId = null;
+  currentPlayerId = null;
+  document.body.className = '';
+}
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+window.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal')) {
+    e.target.style.display = 'none';
+  }
+});
+
+// Utility: close modals on ESC
+window.addEventListener('keydown', function(e) {
+  if (e.key === "Escape") {
+    document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
+  }
+});
+
+// Utility: autofocus on input when modal is shown
+document.querySelectorAll('.modal').forEach(modal => {
+  modal.addEventListener('transitionend', function() {
+    const input = modal.querySelector('input[type="text"]');
+    if (modal.style.display === 'block' && input) input.focus();
+  });
+});
+
+// Optional: keep UI responsive on resize for checklist
+window.addEventListener('resize', function() {
+  const container = document.getElementById('checklistContainer');
+  if (!container) return;
+  container.className = `checklist-grid ${window.innerWidth<800?'mobile':'desktop'}`;
+});
+
+
+
   </script>
 </body>
 </html>
+```
+
