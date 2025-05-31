@@ -1,11 +1,9 @@
-```html name=index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎮 Epic Checklist Game Multiplayer</title>
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
   <style>
@@ -112,10 +110,10 @@
       <p>Challenge yourself with epic checklists and compete with friends in real time!</p>
     </div>
     <div id="mainMenu" class="main-menu">
-      <div class="menu-card" onclick="showCreateGameModal()">
-        <h3>🎯 Create New Game</h3>
-        <p>Start a fresh challenge with your own custom settings</p>
-        <button class="btn btn-success">Create Game</button>
+      <div class="menu-card" onclick="showJoinGameModal()">
+        <h3>🚀 Join an Available Game</h3>
+        <p>Pick from the list of available games and play!</p>
+        <button class="btn btn-success">Join Game</button>
       </div>
       <div class="menu-card" onclick="showLeaderboard()">
         <h3>🏆 Leaderboard</h3>
@@ -124,10 +122,11 @@
       </div>
       <div class="menu-card" onclick="showAdminPanel()">
         <h3>🛠️ Admin Panel</h3>
-        <p>Manage games and reset data (admin only)</p>
+        <p>Create or manage games/items (admin only)</p>
         <button class="btn btn-danger">Admin Tools</button>
       </div>
     </div>
+
     <div id="gameBoard" class="game-board">
       <div class="game-header">
         <h2 id="gameTitle">Your Epic Challenge</h2>
@@ -150,7 +149,6 @@
         </div>
         <div class="progress-message" id="progressMessage">💪 Let's get started!</div>
       </div>
-      <!-- Live leaderboard for this game -->
       <div id="liveLeaderboard" class="leaderboard" style="margin-bottom:15px;">
         <h2 style="font-size:1.2rem;">Live Player Progress</h2>
         <table class="leaderboard-table">
@@ -158,8 +156,6 @@
             <tr>
               <th>👤 Player</th>
               <th>⚡ Score</th>
-              <th>🎯 Difficulty</th>
-              <th>🎨 Theme</th>
               <th>📈 Progress</th>
             </tr>
           </thead>
@@ -177,59 +173,83 @@
             <th>🏆 Rank</th>
             <th>👤 Player</th>
             <th>⚡ Score</th>
-            <th>🎯 Difficulty</th>
-            <th>🎨 Theme</th>
             <th>📈 Progress</th>
-            <th>📅 Created</th>
+            <th>🕹️ Game</th>
+            <th>📅 Joined</th>
           </tr>
         </thead>
         <tbody id="leaderboardBody"></tbody>
       </table>
       <button class="btn" onclick="hideLeaderboard()" style="margin-top: 20px;">Back to Menu</button>
     </div>
-    <!-- Create Game Modal -->
-    <div id="createGameModal" class="modal">
+    <!-- Join Game Modal -->
+    <div id="joinGameModal" class="modal">
       <div class="modal-content">
-        <h2>🎯 Create New Game</h2>
-        <form id="createGameForm">
-          <div class="form-group">
-            <label for="playerName">👤 Player Name:</label>
-            <input type="text" id="playerName" required placeholder="Enter your name" maxlength="20">
+        <h2>🚀 Join a Game</h2>
+        <form onsubmit="joinSelectedGame(event)">
+          <div id="availableGamesList"></div>
+          <div class="form-group" style="margin-top:12px;">
+            <label for="playerNameJoin">Your Player Name:</label>
+            <input type="text" id="playerNameJoin" required maxlength="20" placeholder="Enter your name">
           </div>
-          <div class="form-group">
-            <label for="deviceType">📱 Device Type:</label>
-            <select id="deviceType">
-              <option value="desktop">💻 Desktop (Compact Layout)</option>
-              <option value="mobile">📱 Mobile (Touch-Friendly)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="difficulty">🎯 Difficulty Level:</label>
-            <select id="difficulty">
-              <option value="easy">🟢 Easy (3×3 = 9 items)</option>
-              <option value="normal">🟡 Normal (4×5 = 20 items)</option>
-              <option value="hard">🟠 Hard (5×6 = 30 items)</option>
-              <option value="epic">🔴 Epic (6×6 = 36 items)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="theme">🎨 Theme:</label>
-            <select id="theme">
-              <option value="classic">💙 Classic (Blue)</option>
-              <option value="fire">🔥 Fire (Red/Orange)</option>
-              <option value="nature">🌿 Nature (Green)</option>
-              <option value="royal">👑 Royal (Purple)</option>
-              <option value="neon">⚡ Neon (Pink/Cyan)</option>
-            </select>
-          </div>
-          <button type="submit" class="btn btn-success">🚀 Create Game</button>
-          <button type="button" class="btn" onclick="closeModal('createGameModal')">Cancel</button>
+          <button type="submit" class="btn btn-success">Join Selected Game</button>
+          <button type="button" class="btn" onclick="closeModal('joinGameModal')">Cancel</button>
         </form>
+      </div>
+    </div>
+    <!-- Admin Modal for Game Creation and Item Management -->
+    <div id="adminGameModal" class="modal">
+      <div class="modal-content">
+        <h2>🛠️ Admin Panel</h2>
+        <div style="display:flex;gap:12px;margin-bottom:18px;">
+          <button type="button" class="btn" onclick="showAdminTab('createGameTab')">Create Game</button>
+          <button type="button" class="btn" onclick="showAdminTab('manageItemsTab')">Manage Items</button>
+        </div>
+        <div id="createGameTab">
+          <form id="createGameForm">
+            <div class="form-group">
+              <label for="adminGameName">Game Name:</label>
+              <input type="text" id="adminGameName" required maxlength="40" placeholder="e.g. Staff Meeting Bingo">
+            </div>
+            <div class="form-group">
+              <label for="difficulty">Difficulty Level:</label>
+              <select id="difficulty">
+                <option value="easy">🟢 Easy (3×3 = 9 items)</option>
+                <option value="normal">🟡 Normal (4×5 = 20 items)</option>
+                <option value="hard">🟠 Hard (5×6 = 30 items)</option>
+                <option value="epic">🔴 Epic (6×6 = 36 items)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="theme">Theme:</label>
+              <select id="theme">
+                <option value="classic">💙 Classic (Blue)</option>
+                <option value="fire">🔥 Fire (Red/Orange)</option>
+                <option value="nature">🌿 Nature (Green)</option>
+                <option value="royal">👑 Royal (Purple)</option>
+                <option value="neon">⚡ Neon (Pink/Cyan)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-success">Create Game</button>
+          </form>
+        </div>
+        <div id="manageItemsTab" style="display:none;">
+          <form id="addItemForm" style="margin-bottom:20px;">
+            <div class="form-group">
+              <label for="newItemInput">Add New Bingo Item:</label>
+              <input type="text" id="newItemInput" maxlength="150" placeholder="e.g. Someone's phone goes off" required>
+            </div>
+            <button type="submit" class="btn btn-success">Add Item</button>
+          </form>
+          <h3>Current Items</h3>
+          <ul id="itemList" style="max-height:220px;overflow:auto;padding-left:18px;"></ul>
+          <button class="btn btn-danger" style="margin-top:12px;" onclick="resetAllItems()">Reset Items to Default</button>
+        </div>
+        <button type="button" class="btn" style="margin-top: 20px;" onclick="closeModal('adminGameModal')">Close Admin Panel</button>
       </div>
     </div>
   </div>
   <script>
-    // Firebase config for your project
     const firebaseConfig = {
       apiKey: "AIzaSyDeQPS8fkc6uH9shQye35At98Fa5V62Z7A",
       authDomain: "bingo-e3517.firebaseapp.com",
@@ -243,8 +263,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- Custom checklist items as provided by user ---
-    const checklistItems = [
+    const DEFAULT_ITEMS = [
       "The Wi-Fi password is written on a whiteboard",
       "Key concept defined early in the session",
       "Presenter’s family photo",
@@ -369,83 +388,174 @@
       neon: { name: 'Neon', primary: '#E91E63', secondary: '#FCE4EC', accent: '#C2185B', emoji: '⚡' }
     };
 
-    const LEADERBOARD_PATH = "bingo-multiplayer/players";
-    let currentPlayerId = null;
+    const GAMES_PATH = "bingo-multiplayer/games";
+    const PLAYERS_PATH = "bingo-multiplayer/players";
+    const ITEM_PATH = "bingo-multiplayer/items";
+    let allItems = [];
     let currentGame = null;
-    let currentGameKey = null;
-    let currentThemeKey = 'classic';
+    let currentGameId = null;
+    let currentPlayerId = null;
+    let currentPlayerName = null;
 
-    function showCreateGameModal() {
-      document.getElementById('createGameModal').style.display = 'block';
-      document.getElementById('playerName').focus();
+    function fetchItemsAndRenderList() {
+      db.ref(ITEM_PATH).once('value').then(snap => {
+        if (!snap.exists()) {
+          db.ref(ITEM_PATH).set(DEFAULT_ITEMS).then(() => {
+            allItems = [...DEFAULT_ITEMS];
+            renderItemList();
+          });
+        } else {
+          allItems = snap.val();
+          renderItemList();
+        }
+      });
+    }
+    function renderItemList() {
+      const ul = document.getElementById('itemList');
+      if (!ul) return;
+      ul.innerHTML = "";
+      allItems.forEach((item, idx) => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        li.style.display = "flex";
+        li.style.alignItems = "center";
+        li.style.justifyContent = "space-between";
+        li.style.gap = "8px";
+        li.innerHTML += ` <button onclick="removeItem(${idx})" style="margin-left:14px;background:#e74c3c;color:white;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;">Remove</button>`;
+        ul.appendChild(li);
+      });
+    }
+    function addItemToDB(e) {
+      e.preventDefault();
+      const input = document.getElementById('newItemInput');
+      const val = input.value.trim();
+      if (!val) return alert("Enter an item!");
+      if (allItems.includes(val)) return alert("That item already exists!");
+      allItems.push(val);
+      db.ref(ITEM_PATH).set(allItems).then(() => {
+        input.value = "";
+        renderItemList();
+        alert("Item added!");
+      });
+    }
+    function removeItem(idx) {
+      if (!confirm("Remove this item?")) return;
+      allItems.splice(idx, 1);
+      db.ref(ITEM_PATH).set(allItems).then(renderItemList);
+    }
+    function resetAllItems() {
+      if (!confirm("Reset all items to original defaults? This will remove all additions and deletions.")) return;
+      db.ref(ITEM_PATH).set(DEFAULT_ITEMS).then(() => {
+        allItems = [...DEFAULT_ITEMS];
+        renderItemList();
+      });
+    }
+    function showAdminTab(tabId) {
+      document.getElementById('createGameTab').style.display = tabId === 'createGameTab' ? 'block' : 'none';
+      document.getElementById('manageItemsTab').style.display = tabId === 'manageItemsTab' ? 'block' : 'none';
+    }
+    function createGameFromAdmin(e) {
+      e.preventDefault();
+      const gameName = document.getElementById('adminGameName').value.trim();
+      const difficulty = document.getElementById('difficulty').value;
+      const theme = document.getElementById('theme').value;
+      if (!gameName) {
+        alert("Please enter a game name!");
+        return;
+      }
+      db.ref(ITEM_PATH).once('value').then(snap => {
+        const itemsArr = snap.val() || DEFAULT_ITEMS;
+        const diff = difficultySettings[difficulty];
+        const thm = themeSettings[theme];
+        const selectedItems = shuffleArray([...itemsArr]).slice(0, diff.total);
+        const gameId = gameName.replace(/\W/g,"") + "_" + Date.now();
+        db.ref(`${GAMES_PATH}/${gameId}`).set({
+          id: gameId,
+          name: gameName,
+          difficulty: diff,
+          difficultyKey: difficulty,
+          theme: thm,
+          themeKey: theme,
+          items: selectedItems,
+          created: new Date().toISOString(),
+          isOpen: true
+        }).then(()=>{
+          alert("Game created!");
+          closeModal('adminGameModal');
+        });
+      });
+    }
+    document.getElementById('createGameForm').addEventListener('submit', createGameFromAdmin);
+    document.getElementById('addItemForm').addEventListener('submit', addItemToDB);
+
+    function showAdminPanel() {
+      const password = prompt("Enter admin password:");
+      if (password !== "admin123") {
+        alert("❌ Incorrect password!");
+        return;
+      }
+      showAdminTab('createGameTab');
+      document.getElementById('adminGameModal').style.display = 'block';
+      fetchItemsAndRenderList();
+    }
+
+    function showJoinGameModal() {
+      document.getElementById('joinGameModal').style.display = 'block';
+      const listDiv = document.getElementById('availableGamesList');
+      listDiv.innerHTML = "Loading games...";
+      db.ref(GAMES_PATH).once('value').then(snapshot => {
+        const games = snapshot.val() || {};
+        let html = "";
+        Object.values(games).filter(g=>g.isOpen).forEach(game => {
+          html += `<div>
+            <input type="radio" name="gameSelect" value="${game.id}" id="game_radio_${game.id}" required>
+            <label for="game_radio_${game.id}"><b>${game.name}</b> - ${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name} [${game.items.length} items]</label>
+          </div>`;
+        });
+        listDiv.innerHTML = html || "<div>No games available. Ask an admin to create one!</div>";
+      });
     }
     function closeModal(modalId) {
       document.getElementById(modalId).style.display = 'none';
     }
-    function showLeaderboard() {
-      document.getElementById('mainMenu').style.display = 'none';
-      document.getElementById('gameBoard').style.display = 'none';
-      document.getElementById('leaderboard').style.display = 'block';
-      updateLeaderboardUI();
+    function joinSelectedGame(e) {
+      e.preventDefault();
+      const playerName = document.getElementById('playerNameJoin').value.trim();
+      const gameId = (document.querySelector('input[name="gameSelect"]:checked')||{}).value;
+      if (!playerName) return alert("Please enter your name!");
+      if (!gameId) return alert("Please select a game!");
+      joinGame(gameId, playerName);
+      closeModal('joinGameModal');
     }
-    function hideLeaderboard() {
-      document.getElementById('leaderboard').style.display = 'none';
-      document.getElementById('mainMenu').style.display = 'grid';
-    }
-    function backToMenu() {
-      document.getElementById('gameBoard').style.display = 'none';
-      document.getElementById('mainMenu').style.display = 'grid';
-      if (currentGameKey) db.ref(LEADERBOARD_PATH + "/" + currentGameKey).remove();
-      currentGame = null;
-      currentGameKey = null;
-      document.body.className = '';
-    }
-
-    function shuffleArray(array) {
-      const arr = [...array];
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    }
-    function createGame(playerName, difficulty, theme, deviceType) {
-      const difficultyData = difficultySettings[difficulty];
-      const themeData = themeSettings[theme];
-      currentThemeKey = theme;
-      const key = playerName.replace(/\W/g,"") + "_" + Date.now();
-      currentGameKey = key;
-      const selectedItems = shuffleArray([...checklistItems]).slice(0, difficultyData.total);
-      const gameObj = {
-        id: key,
-        playerName, theme: themeData, themeKey: theme, difficulty: difficultyData, difficultyKey: difficulty,
-        deviceType, items: selectedItems, completed: new Array(difficultyData.total).fill(false),
-        completedCount: 0, created: new Date().toISOString()
-      };
-      db.ref(LEADERBOARD_PATH + "/" + key).set({
-        id: key,
-        name: playerName,
-        difficulty: difficultyData.name,
-        difficultyKey: difficulty,
-        theme: themeData.name,
-        themeKey: theme,
-        completedCount: 0,
-        totalItems: difficultyData.total,
-        created: gameObj.created,
-        timestamp: Date.now()
+    function joinGame(gameId, playerName) {
+      db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(snapshot => {
+        const game = snapshot.val();
+        if (!game) return alert("Game not found!");
+        currentGame = game;
+        currentGameId = gameId;
+        currentPlayerName = playerName;
+        currentPlayerId = playerName.replace(/\W/g,"") + "_" + Date.now();
+        db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).set({
+          id: currentPlayerId,
+          name: playerName,
+          completedCount: 0,
+          totalItems: game.items.length,
+          timestamp: Date.now()
+        });
+        showGameBoard();
       });
-      return gameObj;
     }
     function showGameBoard() {
-      if (!currentGame) return;
       document.getElementById('mainMenu').style.display = 'none';
       document.getElementById('leaderboard').style.display = 'none';
       document.getElementById('gameBoard').style.display = 'block';
-      document.body.className = `theme-${currentThemeKey}`;
+      document.body.className = `theme-${currentGame.themeKey}`;
       document.getElementById('gameTitle').textContent =
-        `🎮 ${currentGame.playerName}'s ${currentGame.theme.name} ${currentGame.difficulty.name} Challenge`;
+        `🎮 ${currentGame.name}`;
       document.getElementById('gameSubtitle').textContent =
-        `${currentGame.difficulty.emoji} ${currentGame.difficulty.total} Items • ${currentGame.theme.emoji} ${currentGame.theme.name} Theme`;
+        `${currentGame.difficulty.emoji} ${currentGame.difficulty.name} • ${currentGame.theme.emoji} ${currentGame.theme.name} • ${currentGame.items.length} items`;
+      currentGame.completed = Array(currentGame.items.length).fill(false);
+      currentGame.completedCount = 0;
       updateProgress();
       generateChecklist();
       updateLiveLeaderboardUI();
@@ -453,7 +563,7 @@
     function generateChecklist() {
       const container = document.getElementById('checklistContainer');
       container.innerHTML = '';
-      container.className = `checklist-grid ${currentGame.deviceType}`;
+      container.className = `checklist-grid desktop`;
       currentGame.items.forEach((item, idx) => {
         const itemDiv = document.createElement('div');
         itemDiv.className = `checklist-item${currentGame.completed[idx] ? ' completed' : ''}`;
@@ -473,7 +583,7 @@
     function toggleItem(idx) {
       currentGame.completed[idx] = !currentGame.completed[idx];
       currentGame.completedCount = currentGame.completed.filter(Boolean).length;
-      db.ref(LEADERBOARD_PATH + "/" + currentGameKey).update({
+      db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).update({
         completedCount: currentGame.completedCount,
         timestamp: Date.now()
       });
@@ -482,7 +592,7 @@
     }
     function updateProgress() {
       const completed = currentGame.completedCount;
-      const total = currentGame.difficulty.total;
+      const total = currentGame.items.length;
       const percentage = Math.round((completed / total) * 100);
       document.getElementById('currentScore').textContent = completed;
       document.getElementById('totalItems').textContent = total;
@@ -493,40 +603,9 @@
         : "💪 Just getting started!";
     }
     function updateLiveLeaderboardUI() {
-      db.ref(LEADERBOARD_PATH).once('value').then(snapshot => {
+      db.ref(`${PLAYERS_PATH}/${currentGameId}`).on('value', snapshot => {
         const players = snapshot.val() || {};
         const tbody = document.getElementById('liveLeaderboardBody');
-        tbody.innerHTML = "";
-        const relevantPlayers = Object.values(players).filter(p =>
-          p.difficultyKey === currentGame.difficultyKey && p.themeKey === currentThemeKey
-        );
-        relevantPlayers.sort((a, b) => {
-          const ap = (a.completedCount||0)/(a.totalItems||1);
-          const bp = (b.completedCount||0)/(b.totalItems||1);
-          if (bp !== ap) return bp-ap;
-          return (b.completedCount||0)-(a.completedCount||0);
-        });
-        relevantPlayers.forEach(p => {
-          const tr = document.createElement('tr');
-          if (p.id === currentGameKey) tr.className = "me";
-          const percent = Math.round((p.completedCount||0)/(p.totalItems||1)*100);
-          tr.innerHTML = `<td>${p.name}</td>
-            <td>${p.completedCount||0}/${p.totalItems}</td>
-            <td>${difficultySettings[p.difficultyKey].emoji} ${p.difficulty}</td>
-            <td>${themeSettings[p.themeKey].emoji} ${p.theme}</td>
-            <td>${percent}%</td>`;
-          tbody.appendChild(tr);
-        });
-      });
-    }
-    db.ref(LEADERBOARD_PATH).on('value', function() {
-      updateLiveLeaderboardUI();
-      updateLeaderboardUI();
-    });
-    function updateLeaderboardUI() {
-      db.ref(LEADERBOARD_PATH).once('value').then(snapshot => {
-        const players = snapshot.val() || {};
-        const tbody = document.getElementById('leaderboardBody');
         tbody.innerHTML = "";
         const sorted = Object.values(players).sort((a, b) => {
           const ap = (a.completedCount||0)/(a.totalItems||1);
@@ -534,84 +613,76 @@
           if (bp !== ap) return bp-ap;
           return (b.completedCount||0)-(a.completedCount||0);
         });
-        sorted.forEach((p, idx) => {
-          const percent = Math.round((p.completedCount||0)/(p.totalItems||1)*100);
+        sorted.forEach(p => {
           const tr = document.createElement('tr');
-          if (currentGameKey && p.id === currentGameKey) tr.className = "me";
-          tr.innerHTML = `<td>${idx+1}</td>
-            <td>${p.name}</td>
+          if (p.id === currentPlayerId) tr.className = "me";
+          const percent = Math.round((p.completedCount||0)/(p.totalItems||1)*100);
+          tr.innerHTML = `<td>${p.name}</td>
             <td>${p.completedCount||0}/${p.totalItems}</td>
-            <td>${difficultySettings[p.difficultyKey]?.emoji||""} ${p.difficulty}</td>
-            <td>${themeSettings[p.themeKey]?.emoji||""} ${p.theme}</td>
-            <td>${percent}%</td>
-            <td>${p.created ? new Date(p.created).toLocaleDateString() : ""}</td>`;
+            <td>${percent}%</td>`;
           tbody.appendChild(tr);
         });
       });
     }
-    function showAdminPanel() {
-      const password = prompt("Enter admin password:");
-      if (password !== "admin123") {
-        alert("❌ Incorrect password!");
-        return;
-      }
-      const action = confirm("🗑️ Reset all game data? This cannot be undone!\n\nOK = Reset All\nCancel = Go Back");
-      if (action) {
-        if (confirm("⚠️ FINAL WARNING: This will delete ALL player games and scores!")) {
-          db.ref(LEADERBOARD_PATH).remove().then(() => {
-            alert("✅ All game data has been reset!");
-            location.reload();
+    function showLeaderboard() {
+      document.getElementById('mainMenu').style.display = 'none';
+      document.getElementById('gameBoard').style.display = 'none';
+      document.getElementById('leaderboard').style.display = 'block';
+      db.ref(PLAYERS_PATH).once('value').then(snapshot => {
+        const allGames = snapshot.val() || {};
+        const tbody = document.getElementById('leaderboardBody');
+        tbody.innerHTML = "";
+        let allPlayers = [];
+        Object.entries(allGames).forEach(([gameId, players]) => {
+          Object.values(players).forEach(player => {
+            allPlayers.push({...player, gameId});
           });
-        }
+        });
+        allPlayers.sort((a, b) => {
+          const ap = (a.completedCount||0)/(a.totalItems||1);
+          const bp = (b.completedCount||0)/(b.totalItems||1);
+          if (bp !== ap) return bp-ap;
+          return (b.completedCount||0)-(a.completedCount||0);
+        });
+        allPlayers.forEach((p, idx) => {
+          const percent = Math.round((p.completedCount||0)/(p.totalItems||1)*100);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${idx+1}</td>
+            <td>${p.name}</td>
+            <td>${p.completedCount||0}/${p.totalItems}</td>
+            <td>${percent}%</td>
+            <td>${p.gameId}</td>
+            <td>${p.timestamp ? new Date(p.timestamp).toLocaleDateString() : ""}</td>`;
+          tbody.appendChild(tr);
+        });
+      });
+    }
+    function hideLeaderboard() {
+      document.getElementById('leaderboard').style.display = 'none';
+      document.getElementById('mainMenu').style.display = 'grid';
+    }
+    function backToMenu() {
+      document.getElementById('gameBoard').style.display = 'none';
+      document.getElementById('mainMenu').style.display = 'grid';
+      if (currentGameId && currentPlayerId) db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).remove();
+      currentGame = null;
+      currentGameId = null;
+      currentPlayerId = null;
+      document.body.className = '';
+    }
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
       }
+      return arr;
     }
     window.addEventListener('click', function(e) {
       if (e.target.classList.contains('modal')) {
         e.target.style.display = 'none';
       }
     });
-    function detectMobile() {
-      return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    }
-    window.addEventListener('load', function() {
-      if (detectMobile()) {
-        document.getElementById('deviceType').value = 'mobile';
-      }
-    });
-    document.getElementById('createGameForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const playerName = document.getElementById('playerName').value.trim();
-      const difficulty = document.getElementById('difficulty').value;
-      const theme = document.getElementById('theme').value;
-      const deviceType = document.getElementById('deviceType').value;
-      if (!playerName) {
-        alert("⚠️ Please enter a player name!");
-        return;
-      }
-      if (currentGameKey) db.ref(LEADERBOARD_PATH + "/" + currentGameKey).remove();
-      currentGame = createGame(playerName, difficulty, theme, deviceType);
-      closeModal('createGameModal');
-      showGameBoard();
-      setTimeout(() => {
-        alert(`🎉 ${themeSettings[theme].emoji} Epic ${difficultySettings[difficulty].name} board created for ${playerName}! ${difficultySettings[difficulty].emoji}`);
-      }, 500);
-    });
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => { if (modal.style.display === 'block') modal.style.display = 'none'; });
-      }
-      if (e.key === ' ' && currentGame && e.target.tagName !== 'INPUT') {
-        e.preventDefault();
-        const firstUnchecked = currentGame.completed.findIndex(completed => !completed);
-        if (firstUnchecked !== -1) document.getElementById(`item-${firstUnchecked}`).click();
-      }
-    });
-    window.addEventListener('beforeunload', function() {
-      if (currentGameKey) db.ref(LEADERBOARD_PATH + "/" + currentGameKey).remove();
-    });
   </script>
 </body>
 </html>
-```
-This is your fully copy-pastable file with your custom conference bingo item list and all features (themes, mobile, multiplayer, leaderboard) included!
