@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🟪🟩🟥🟦 V 4 PDB Multiplay</title>
+  <title>🟪🟩🟥🟦 V 5 PDB Multiplay</title>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
   <style>
@@ -185,8 +185,14 @@
     </div>
 
     <!-- Add this for admin create game form -->
-    <form id="createGameForm" style="display:none"></form>
-    <form id="addItemForm" style="display:none"></form>
+    <form id="createGameForm" style="display:none">
+      <input type="text" name="gameName" placeholder="Game Name">
+      <button type="submit">Create</button>
+    </form>
+    <form id="addItemForm" style="display:none">
+      <input type="text" name="item" placeholder="Item">
+      <button type="submit">Add</button>
+    </form>
 
     <!-- ... any other HTML ... -->
   </div>
