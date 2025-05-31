@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🟪🟩🟥🟦 V3 PD Bingo Multiplayer</title>
+  <title>🟪🟩🟥🟦 V4 PD Bingo Multiplayer</title>
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
+  <!-- (Optional) Analytics: <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics-compat.js"></script> -->
   <style>
     /* -- KEEP ALL YOUR EXISTING CSS HERE -- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -268,9 +270,16 @@
     <!-- END OF MAIN APP HTML -->
 
     <script>
-      // ==== Firebase INIT/SETUP HERE (replace with your config) ====
+      // ==== Firebase INIT/SETUP HERE ====
       const firebaseConfig = {
-        // your Firebase config here
+        apiKey: "AIzaSyDeQPS8fkc6uH9shQye35At98Fa5V62Z7A",
+        authDomain: "bingo-e3517.firebaseapp.com",
+        databaseURL: "https://bingo-e3517-default-rtdb.firebaseio.com",
+        projectId: "bingo-e3517",
+        storageBucket: "bingo-e3517.appspot.com",
+        messagingSenderId: "338765367468",
+        appId: "1:338765367468:web:9d539fe8e1b5351c123709",
+        measurementId: "G-VFXRMS6LN7"
       };
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
