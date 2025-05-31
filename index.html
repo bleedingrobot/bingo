@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🟩🟥🟦 V1 PDB Multiplayer</title>
+  <title>🟪🟩🟥🟦 PD Bingo Multiplayer</title>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
   <style>
@@ -141,11 +142,227 @@
   </style>
 </head>
 <body>
-  <!-- ... all HTML content as in previous full file ... -->
-  <!-- (see previous completions for the full body, or copy the previous output) -->
-  <!-- ... snipped for brevity ... -->
-  <!-- Everything inside <div class="container"> ... </div> goes here, exactly as previously provided -->
-  <!-- ... -->
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🟪🟩🟥🟦 PD Bingo Multiplayer</title>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
+  <style>
+    /* ...all CSS from previous snippets... */
+    /* For brevity, use the full CSS in the <style> block from earlier chunks or the sample file */
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="rubik-cube">🟪🟩🟥🟦</span>
+      <h1 style="display:inline;">PD Bingo</h1>
+      <p>Challenge yourself with PD bingo boards and compete with friends in real time!</p>
+    </div>
+    <div id="mainMenu" class="main-menu">
+      <div class="menu-card" onclick="showJoinGameModal()">
+        <h3>🚀 Join an Available Game</h3>
+        <p>Pick from the list of available games and play!</p>
+        <button class="btn btn-success">Join Game</button>
+      </div>
+      <div class="menu-card" onclick="showPlayerCreateGameModal()">
+        <h3>🟦 Create Your Own Game</h3>
+        <p>Make a PD bingo game for yourself and invite others!</p>
+        <button class="btn btn-success">Create Game</button>
+      </div>
+      <div class="menu-card" onclick="showLeaderboard()">
+        <h3>🏆 Leaderboard</h3>
+        <p>See how you stack up against other players</p>
+        <button class="btn">View Scores</button>
+      </div>
+      <div class="menu-card" onclick="showAdminPanel()">
+        <h3>🛠️ Admin Panel</h3>
+        <p>Create or manage games/items (admin only)</p>
+        <button class="btn btn-danger">Admin Tools</button>
+      </div>
+    </div>
+    <div id="liveGamesSection">
+      <div style="background:white;border-radius:15px;box-shadow:0 2px 10px rgba(0,0,0,0.10);padding:18px 20px 10px 20px;">
+        <h2 style="color:#4285F4;margin-bottom:16px;text-align:center;font-size:1.3rem;">🟦 Currently Running Games & Players</h2>
+        <div id="liveGamesList"></div>
+      </div>
+    </div>
+    <!-- Join Game Modal -->
+    <div id="joinGameModal" class="modal">
+      <div class="modal-content">
+        <h2>🚀 Join a Game</h2>
+        <form onsubmit="joinSelectedGame(event)">
+          <div id="availableGamesList"></div>
+          <div class="form-group" style="margin-top:12px;">
+            <label for="playerNameJoin">Your Player Name:</label>
+            <input type="text" id="playerNameJoin" required maxlength="20" placeholder="Enter your name">
+          </div>
+          <button type="submit" class="btn btn-success">Join Selected Game</button>
+          <button type="button" class="btn" onclick="closeModal('joinGameModal')">Cancel</button>
+        </form>
+      </div>
+    </div>
+    <!-- Player Create Game Modal -->
+    <div id="playerCreateGameModal" class="modal">
+      <div class="modal-content">
+        <h2>🟦 Create Your Own Game</h2>
+        <form id="playerCreateGameForm">
+          <div class="form-group">
+            <label for="playerGameName">Game Name:</label>
+            <input type="text" id="playerGameName" maxlength="40" required placeholder="e.g. My Custom Bingo">
+          </div>
+          <div class="form-group">
+            <label for="playerNameCreator">Your Name:</label>
+            <input type="text" id="playerNameCreator" maxlength="20" required placeholder="e.g. Alice">
+          </div>
+          <div class="form-group">
+            <label for="playerDifficulty">Difficulty Level:</label>
+            <select id="playerDifficulty">
+              <option value="easy">🟢 Easy (3×3 = 9 items)</option>
+              <option value="normal">🟡 Normal (4×5 = 20 items)</option>
+              <option value="hard">🟠 Hard (5×6 = 30 items)</option>
+              <option value="epic">🔴 Epic (6×6 = 36 items)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="playerTheme">Theme:</label>
+            <select id="playerTheme">
+              <option value="classic">💙 Classic (Blue)</option>
+              <option value="fire">🔥 Fire (Red/Orange)</option>
+              <option value="nature">🌿 Nature (Green)</option>
+              <option value="royal">👑 Royal (Purple)</option>
+              <option value="neon">⚡ Neon (Pink/Cyan)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-success">Create Game</button>
+          <button type="button" class="btn" onclick="closeModal('playerCreateGameModal')">Cancel</button>
+        </form>
+      </div>
+    </div>
+    <!-- Admin Modal for Game Creation and Item Management -->
+    <div id="adminGameModal" class="modal">
+      <div class="modal-content">
+        <h2>🛠️ Admin Panel</h2>
+        <div style="display:flex;gap:12px;margin-bottom:18px;">
+          <button type="button" class="btn" onclick="showAdminTab('createGameTab')">Create Game</button>
+          <button type="button" class="btn" onclick="showAdminTab('manageItemsTab')">Manage Items</button>
+          <button type="button" class="btn" onclick="showAdminTab('gamesListTab')">Manage Games</button>
+        </div>
+        <!-- Create Game Tab -->
+        <div id="createGameTab">
+          <form id="createGameForm">
+            <div class="form-group">
+              <label for="adminGameName">Game Name:</label>
+              <input type="text" id="adminGameName" required maxlength="40" placeholder="e.g. Staff Meeting Bingo">
+            </div>
+            <div class="form-group">
+              <label for="difficulty">Difficulty Level:</label>
+              <select id="difficulty">
+                <option value="easy">🟢 Easy (3×3 = 9 items)</option>
+                <option value="normal">🟡 Normal (4×5 = 20 items)</option>
+                <option value="hard">🟠 Hard (5×6 = 30 items)</option>
+                <option value="epic">🔴 Epic (6×6 = 36 items)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="theme">Theme:</label>
+              <select id="theme">
+                <option value="classic">💙 Classic (Blue)</option>
+                <option value="fire">🔥 Fire (Red/Orange)</option>
+                <option value="nature">🌿 Nature (Green)</option>
+                <option value="royal">👑 Royal (Purple)</option>
+                <option value="neon">⚡ Neon (Pink/Cyan)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-success">Create Game</button>
+          </form>
+        </div>
+        <!-- Manage Items Tab -->
+        <div id="manageItemsTab" style="display:none;">
+          <form id="addItemForm" style="margin-bottom:20px;">
+            <div class="form-group">
+              <label for="newItemInput">Add New Bingo Item:</label>
+              <input type="text" id="newItemInput" maxlength="150" placeholder="e.g. Someone's phone goes off" required>
+            </div>
+            <button type="submit" class="btn btn-success">Add Item</button>
+          </form>
+          <h3>Current Items</h3>
+          <ul id="itemList" style="max-height:220px;overflow:auto;padding-left:18px;"></ul>
+          <button class="btn btn-danger" style="margin-top:12px;" onclick="resetAllItems()">Reset Items to Default</button>
+        </div>
+        <!-- Manage Games/Players Tab -->
+        <div id="gamesListTab" style="display:none;">
+          <h3>Existing Games</h3>
+          <div id="adminGamesList"></div>
+        </div>
+        <button type="button" class="btn" style="margin-top: 20px;" onclick="closeModal('adminGameModal')">Close Admin Panel</button>
+      </div>
+    </div>
+    <div id="gameBoard" class="game-board">
+      <div class="game-header">
+        <h2 id="gameTitle">Your PD Bingo Challenge</h2>
+        <p id="gameSubtitle">Complete all items to achieve victory!</p>
+      </div>
+      <div class="progress-section">
+        <div class="progress-stats">
+          <div class="stat">
+            <div class="stat-value" id="currentScore">0</div>
+            <div class="stat-label">Score</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="totalItems">0</div>
+            <div class="stat-label">Total Items</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="completionPercent">0%</div>
+            <div class="stat-label">Complete</div>
+          </div>
+        </div>
+        <div class="progress-message" id="progressMessage">💪 Let's get started!</div>
+      </div>
+      <div id="liveLeaderboard" class="leaderboard" style="margin-bottom:15px;">
+        <h2 style="font-size:1.2rem;">Live Player Progress</h2>
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>👤 Player</th>
+              <th>⚡ Score</th>
+              <th>📈 Progress</th>
+            </tr>
+          </thead>
+          <tbody id="liveLeaderboardBody"></tbody>
+        </table>
+      </div>
+      <div id="checklistContainer" class="checklist-grid"></div>
+      <button class="btn" onclick="backToMenu()">Back to Menu</button>
+    </div>
+    <div id="leaderboard" class="leaderboard" style="display: none;">
+      <h2>🏆 Player Leaderboard</h2>
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>🏆 Rank</th>
+            <th>👤 Player</th>
+            <th>⚡ Score</th>
+            <th>📈 Progress</th>
+            <th>🕹️ Game</th>
+            <th>📅 Joined</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardBody"></tbody>
+      </table>
+      <button class="btn" onclick="hideLeaderboard()" style="margin-top: 20px;">Back to Menu</button>
+    </div>
+  <!-- The <script> tag with all JS code goes here -->
+  </div>
+</body>
+</html>
+
+
   <script>
     // Firebase config and constants
     const firebaseConfig = {
