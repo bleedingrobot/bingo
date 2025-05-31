@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🟪🟩🟥🟦 V1 PD Bingo Multiplayer</title>
+  <title>🟪🟩🟥🟦 V2 PD Bingo Multiplayer</title>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
   <style>
@@ -152,7 +152,7 @@
         <button class="btn btn-danger">Admin Tools</button>
       </div>
     </div>
-    <div id="liveGamesSection"><!-- ... unchanged ... --></div>
+    <div id="liveGamesSection"></div>
     <!-- JOIN GAME MODAL -->
     <div id="joinGameModal" class="modal">
       <div class="modal-content">
@@ -240,221 +240,296 @@
         </form>
       </div>
     </div>
-    <!-- ... (Admin Modal, Game Board, Leaderboard, etc. unchanged) ... -->
+    <!-- LEADERBOARD SECTION -->
+    <div id="leaderboard" style="display:none;">
+      <div class="leaderboard">
+        <h2>🏆 Leaderboard</h2>
+        <div id="leaderboardTable">Loading...</div>
+        <button class="btn" onclick="backToMenu()">Back to Menu</button>
+      </div>
+    </div>
+    <!-- ADMIN PANEL SECTION -->
+    <div id="adminPanel" style="display:none;">
+      <div class="leaderboard">
+        <h2>🛠️ Admin Panel</h2>
+        <div>Admin features coming soon! (You can add your admin features here.)</div>
+        <button class="btn" onclick="backToMenu()">Back to Menu</button>
+      </div>
+    </div>
+    <!-- GAME BOARD PLACEHOLDER (You should add your own game board HTML here) -->
+    <div id="gameBoard" class="game-board" style="display:none;">
+      <div class="game-header">
+        <h2 id="gameTitle"></h2>
+        <p id="gameSubtitle"></p>
+      </div>
+      <!-- Add the rest of your game board UI here -->
+      <button class="btn" onclick="backToMenu()">Back to Menu</button>
+    </div>
+    <!-- END OF MAIN APP HTML -->
 
-  <script>
-    // ==== Firebase config, constants, and helpers unchanged ====
-    // (keep your existing code up to the join/rejoin logic)
+    <script>
+      // ==== Firebase INIT/SETUP HERE (replace with your config) ====
+      const firebaseConfig = {
+        // your Firebase config here
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+      // CONSTANTS
+      const GAMES_PATH = "bingo-multiplayer/games";
+      const PLAYERS_PATH = "bingo-multiplayer/players";
+      // Simple defaults for demo; provide real data in your app!
+      const DEFAULT_ITEMS = Array.from({length: 40}, (_,i)=>`PD Item ${i+1}`);
+      const difficultySettings = {
+        easy:   { emoji: "🟢", name: "Easy",   total: 9 },
+        normal: { emoji: "🟡", name: "Normal", total: 20 },
+        hard:   { emoji: "🟠", name: "Hard",   total: 30 },
+        epic:   { emoji: "🔴", name: "Epic",   total: 36 }
+      };
+      const themeSettings = {
+        classic: { emoji: "💙", name: "Classic" },
+        fire:    { emoji: "🔥", name: "Fire"    },
+        nature:  { emoji: "🌿", name: "Nature"  },
+        royal:   { emoji: "👑", name: "Royal"   },
+        neon:    { emoji: "⚡", name: "Neon"    }
+      };
+      // App State
+      let currentGame = null, currentGameId = null, currentPlayerId = null, currentPlayerName = null;
 
-    // --- Modified Join Game logic ---
-    function showJoinGameModal() {
-      document.getElementById('joinGameModal').style.display = 'block';
-      const listDiv = document.getElementById('availableGamesList');
-      listDiv.innerHTML = "Loading games...";
-      db.ref(GAMES_PATH).once('value').then(snapshot => {
-        const games = snapshot.val() || {};
-        let html = "";
-        Object.values(games).filter(g=>g.isOpen).forEach(game => {
-          html += `<div>
-            <input type="radio" name="gameSelect" value="${game.id}" id="game_radio_${game.id}" required>
-            <label for="game_radio_${game.id}"><b>${game.name}</b> - ${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name} [${game.items.length} items]</label>
-          </div>`;
-        });
-        listDiv.innerHTML = html || "<div>No games available. Ask an admin to create one!</div>";
-      });
-    }
-    function joinSelectedGame(e) {
-      e.preventDefault();
-      const playerName = document.getElementById('playerNameJoin').value.trim();
-      const password = document.getElementById('playerPasswordJoin').value;
-      const password2 = document.getElementById('playerPasswordJoin2').value;
-      const gameId = (document.querySelector('input[name="gameSelect"]:checked')||{}).value;
-      if (!playerName) return alert("Please enter your name!");
-      if (!password) return alert("Please enter a password!");
-      if (password.length < 3) return alert("Password should be at least 3 characters.");
-      if (password !== password2) return alert("Passwords do not match!");
-      if (!gameId) return alert("Please select a game!");
-      db.ref(`${PLAYERS_PATH}/${gameId}`).once('value').then(playersSnap => {
-        const players = playersSnap.val() || {};
-        const existing = Object.values(players).find(p => p.name === playerName);
-        if (existing) {
-          alert("A player with that name already exists in this game. If it's you, use 'Rejoin Game'.");
-          return;
+      // Helper
+      function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
         }
-        joinGame(gameId, playerName, password);
-        closeModal('joinGameModal');
-      });
-    }
-    function joinGame(gameId, playerName, password) {
-      db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(snapshot => {
-        const game = snapshot.val();
-        if (!game) return alert("Game not found!");
-        currentGame = game;
-        currentGameId = gameId;
-        currentPlayerName = playerName;
-        currentPlayerId = playerName.replace(/\W/g,"") + "_" + Date.now();
-        // Store completedItems as all "false"
-        db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).set({
-          id: currentPlayerId,
-          name: playerName,
-          password: password,
-          completedCount: 0,
-          totalItems: game.items.length,
-          completedItems: Array(game.items.length).fill(false),
-          timestamp: Date.now()
-        });
-        showGameBoard(false, Array(game.items.length).fill(false));
-      });
-    }
+        return arr;
+      }
 
-    // --- New: Rejoin Game logic ---
-    function showRejoinGameModal() {
-      document.getElementById('rejoinGameModal').style.display = 'block';
-      const listDiv = document.getElementById('rejoinGamesList');
-      listDiv.innerHTML = "Loading games...";
-      db.ref(GAMES_PATH).once('value').then(snapshot => {
-        const games = snapshot.val() || {};
-        let html = "";
-        Object.values(games).forEach(game => {
-          html += `<div>
-            <input type="radio" name="rejoinGameSelect" value="${game.id}" id="rejoin_radio_${game.id}" required>
-            <label for="rejoin_radio_${game.id}"><b>${game.name}</b> - ${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name}</label>
-          </div>`;
-        });
-        listDiv.innerHTML = html || "<div>No games available. Ask an admin to create one!</div>";
-      });
-    }
-    function rejoinSelectedGame(e) {
-      e.preventDefault();
-      const playerName = document.getElementById('playerNameRejoin').value.trim();
-      const password = document.getElementById('playerPasswordRejoin').value;
-      const gameId = (document.querySelector('input[name="rejoinGameSelect"]:checked')||{}).value;
-      if (!playerName) return alert("Please enter your name!");
-      if (!password) return alert("Please enter your password!");
-      if (!gameId) return alert("Please select a game!");
-      db.ref(`${PLAYERS_PATH}/${gameId}`).once('value').then(playersSnap => {
-        const players = playersSnap.val() || {};
-        const foundEntry = Object.values(players).find(p => p.name === playerName);
-        if (!foundEntry) {
-          alert("No player with that name found in this game.");
-          return;
-        }
-        if (foundEntry.password !== password) {
-          alert("Incorrect password.");
-          return;
-        }
-        currentGameId = gameId;
-        currentPlayerId = foundEntry.id;
-        currentPlayerName = foundEntry.name;
-        db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(gSnap => {
-          currentGame = gSnap.val();
-          // Pass completedItems array to showGameBoard
-          showGameBoard(true, foundEntry.completedItems || Array(currentGame.items.length).fill(false));
-        });
-        closeModal('rejoinGameModal');
-      });
-    }
+      // Hide/Show helpers
+      function hideAllSections() {
+        document.getElementById('mainMenu').style.display = 'none';
+        let gameBoard = document.getElementById('gameBoard');
+        if (gameBoard) gameBoard.style.display = 'none';
+        document.getElementById('leaderboard').style.display = 'none';
+        document.getElementById('adminPanel').style.display = 'none';
+      }
+      function backToMenu() {
+        hideAllSections();
+        document.getElementById('mainMenu').style.display = 'grid';
+        document.body.className = '';
+      }
 
-    // --- Player Create Game logic ---
-    function showPlayerCreateGameModal() {
-      document.getElementById('playerCreateGameModal').style.display = 'block';
-    }
-    document.getElementById('playerCreateGameForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const gameName = document.getElementById('playerGameName').value.trim();
-      const playerName = document.getElementById('playerNameCreator').value.trim();
-      const password = document.getElementById('playerPasswordCreator').value;
-      const password2 = document.getElementById('playerPasswordCreator2').value;
-      const difficulty = document.getElementById('playerDifficulty').value;
-      const theme = document.getElementById('playerTheme').value;
-      if (!gameName) return alert("Please enter a game name!");
-      if (!playerName) return alert("Please enter your name!");
-      if (!password) return alert("Please set a password!");
-      if (password.length < 3) return alert("Password should be at least 3 characters.");
-      if (password !== password2) return alert("Passwords do not match!");
-      db.ref("bingo-multiplayer/items").once('value').then(snap => {
-        const itemsArr = snap.val() || DEFAULT_ITEMS;
-        const diff = difficultySettings[difficulty];
-        const thm = themeSettings[theme];
-        const selectedItems = shuffleArray([...itemsArr]).slice(0, diff.total);
-        const gameId = gameName.replace(/\W/g,"") + "_" + Date.now();
-        db.ref(`bingo-multiplayer/games/${gameId}`).set({
-          id: gameId,
-          name: gameName,
-          difficulty: diff,
-          difficultyKey: difficulty,
-          theme: thm,
-          themeKey: theme,
-          items: selectedItems,
-          created: new Date().toISOString(),
-          isOpen: true
-        }).then(()=>{
-          // Creator is first player - auto-join game
-          const playerId = playerName.replace(/\W/g,"") + "_" + Date.now();
-          db.ref(`bingo-multiplayer/players/${gameId}/${playerId}`).set({
-            id: playerId,
+      // --- Main Menu Buttons ---
+      function showLeaderboard() {
+        hideAllSections();
+        document.getElementById('leaderboard').style.display = 'block';
+        loadLeaderboard();
+      }
+      function showAdminPanel() {
+        hideAllSections();
+        document.getElementById('adminPanel').style.display = 'block';
+      }
+
+      // --- Join Game logic ---
+      function showJoinGameModal() {
+        document.getElementById('joinGameModal').style.display = 'block';
+        const listDiv = document.getElementById('availableGamesList');
+        listDiv.innerHTML = "Loading games...";
+        db.ref(GAMES_PATH).once('value').then(snapshot => {
+          const games = snapshot.val() || {};
+          let html = "";
+          Object.values(games).filter(g=>g.isOpen).forEach(game => {
+            html += `<div>
+              <input type="radio" name="gameSelect" value="${game.id}" id="game_radio_${game.id}" required>
+              <label for="game_radio_${game.id}"><b>${game.name}</b> - ${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name} [${game.items.length} items]</label>
+            </div>`;
+          });
+          listDiv.innerHTML = html || "<div>No games available. Ask an admin to create one!</div>";
+        });
+      }
+      function joinSelectedGame(e) {
+        e.preventDefault();
+        const playerName = document.getElementById('playerNameJoin').value.trim();
+        const password = document.getElementById('playerPasswordJoin').value;
+        const password2 = document.getElementById('playerPasswordJoin2').value;
+        const gameId = (document.querySelector('input[name="gameSelect"]:checked')||{}).value;
+        if (!playerName) return alert("Please enter your name!");
+        if (!password) return alert("Please enter a password!");
+        if (password.length < 3) return alert("Password should be at least 3 characters.");
+        if (password !== password2) return alert("Passwords do not match!");
+        if (!gameId) return alert("Please select a game!");
+        db.ref(`${PLAYERS_PATH}/${gameId}`).once('value').then(playersSnap => {
+          const players = playersSnap.val() || {};
+          const existing = Object.values(players).find(p => p.name === playerName);
+          if (existing) {
+            alert("A player with that name already exists in this game. If it's you, use 'Rejoin Game'.");
+            return;
+          }
+          joinGame(gameId, playerName, password);
+          closeModal('joinGameModal');
+        });
+      }
+      function joinGame(gameId, playerName, password) {
+        db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(snapshot => {
+          const game = snapshot.val();
+          if (!game) return alert("Game not found!");
+          currentGame = game;
+          currentGameId = gameId;
+          currentPlayerName = playerName;
+          currentPlayerId = playerName.replace(/\W/g,"") + "_" + Date.now();
+          db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).set({
+            id: currentPlayerId,
             name: playerName,
             password: password,
             completedCount: 0,
-            totalItems: selectedItems.length,
-            completedItems: Array(selectedItems.length).fill(false),
+            totalItems: game.items.length,
+            completedItems: Array(game.items.length).fill(false),
             timestamp: Date.now()
           });
-          closeModal('playerCreateGameModal');
+          showGameBoard(false, Array(game.items.length).fill(false));
+        });
+      }
+
+      // --- Rejoin Game logic ---
+      function showRejoinGameModal() {
+        document.getElementById('rejoinGameModal').style.display = 'block';
+        const listDiv = document.getElementById('rejoinGamesList');
+        listDiv.innerHTML = "Loading games...";
+        db.ref(GAMES_PATH).once('value').then(snapshot => {
+          const games = snapshot.val() || {};
+          let html = "";
+          Object.values(games).forEach(game => {
+            html += `<div>
+              <input type="radio" name="rejoinGameSelect" value="${game.id}" id="rejoin_radio_${game.id}" required>
+              <label for="rejoin_radio_${game.id}"><b>${game.name}</b> - ${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name}</label>
+            </div>`;
+          });
+          listDiv.innerHTML = html || "<div>No games available. Ask an admin to create one!</div>";
+        });
+      }
+      function rejoinSelectedGame(e) {
+        e.preventDefault();
+        const playerName = document.getElementById('playerNameRejoin').value.trim();
+        const password = document.getElementById('playerPasswordRejoin').value;
+        const gameId = (document.querySelector('input[name="rejoinGameSelect"]:checked')||{}).value;
+        if (!playerName) return alert("Please enter your name!");
+        if (!password) return alert("Please enter your password!");
+        if (!gameId) return alert("Please select a game!");
+        db.ref(`${PLAYERS_PATH}/${gameId}`).once('value').then(playersSnap => {
+          const players = playersSnap.val() || {};
+          const foundEntry = Object.values(players).find(p => p.name === playerName);
+          if (!foundEntry) {
+            alert("No player with that name found in this game.");
+            return;
+          }
+          if (foundEntry.password !== password) {
+            alert("Incorrect password.");
+            return;
+          }
           currentGameId = gameId;
-          currentPlayerId = playerId;
-          currentPlayerName = playerName;
+          currentPlayerId = foundEntry.id;
+          currentPlayerName = foundEntry.name;
           db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(gSnap => {
             currentGame = gSnap.val();
-            showGameBoard(false, Array(selectedItems.length).fill(false));
+            showGameBoard(true, foundEntry.completedItems || Array(currentGame.items.length).fill(false));
+          });
+          closeModal('rejoinGameModal');
+        });
+      }
+
+      // --- Player Create Game logic (NO auto-join) ---
+      function showPlayerCreateGameModal() {
+        document.getElementById('playerCreateGameModal').style.display = 'block';
+      }
+      document.getElementById('playerCreateGameForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const gameName = document.getElementById('playerGameName').value.trim();
+        const playerName = document.getElementById('playerNameCreator').value.trim();
+        const password = document.getElementById('playerPasswordCreator').value;
+        const password2 = document.getElementById('playerPasswordCreator2').value;
+        const difficulty = document.getElementById('playerDifficulty').value;
+        const theme = document.getElementById('playerTheme').value;
+        if (!gameName) return alert("Please enter a game name!");
+        if (!playerName) return alert("Please enter your name!");
+        if (!password) return alert("Please set a password!");
+        if (password.length < 3) return alert("Password should be at least 3 characters.");
+        if (password !== password2) return alert("Passwords do not match!");
+        db.ref("bingo-multiplayer/items").once('value').then(snap => {
+          const itemsArr = snap.val() || DEFAULT_ITEMS;
+          const diff = difficultySettings[difficulty];
+          const thm = themeSettings[theme];
+          const selectedItems = shuffleArray([...itemsArr]).slice(0, diff.total);
+          const gameId = gameName.replace(/\W/g,"") + "_" + Date.now();
+          db.ref(`bingo-multiplayer/games/${gameId}`).set({
+            id: gameId,
+            name: gameName,
+            difficulty: diff,
+            difficultyKey: difficulty,
+            theme: thm,
+            themeKey: theme,
+            items: selectedItems,
+            created: new Date().toISOString(),
+            isOpen: true
+          }).then(()=>{
+            closeModal('playerCreateGameModal');
+            alert("Game created! You can now join your game from the main menu.");
           });
         });
       });
-    });
 
-    // --- Game Board handling: restore checklist state on join/rejoin ---
-    function showGameBoard(isRejoin = false, completedItems = []) {
-      document.getElementById('mainMenu').style.display = 'none';
-      document.getElementById('leaderboard').style.display = 'none';
-      document.getElementById('gameBoard').style.display = 'block';
-      document.body.className = `theme-${currentGame.themeKey}`;
-      document.getElementById('gameTitle').textContent =
-        `🟦 ${currentGame.name}`;
-      document.getElementById('gameSubtitle').textContent =
-        `${currentGame.difficulty.emoji} ${currentGame.difficulty.name} • ${currentGame.theme.emoji} ${currentGame.theme.name} • ${currentGame.items.length} items`;
-      // Restore checklist
-      if (isRejoin && Array.isArray(completedItems) && completedItems.length === currentGame.items.length) {
-        currentGame.completed = completedItems.slice();
-        currentGame.completedCount = completedItems.filter(Boolean).length;
-      } else {
-        currentGame.completed = Array(currentGame.items.length).fill(false);
-        currentGame.completedCount = 0;
+      // --- Game Board handling: restore checklist state on join/rejoin ---
+      function showGameBoard(isRejoin = false, completedItems = []) {
+        hideAllSections();
+        let gameBoard = document.getElementById('gameBoard');
+        if (gameBoard) gameBoard.style.display = 'block';
+        document.body.className = `theme-${currentGame.themeKey}`;
+        document.getElementById('gameTitle').textContent = `🟦 ${currentGame.name}`;
+        document.getElementById('gameSubtitle').textContent = `${currentGame.difficulty.emoji} ${currentGame.difficulty.name} • ${currentGame.theme.emoji} ${currentGame.theme.name} • ${currentGame.items.length} items`;
+        // You can expand this function to restore checklist, etc.
       }
-      updateProgress();
-      generateChecklist();
-      updateLiveLeaderboardUI();
-    }
 
-    // --- Save checklist progress on every change ---
-    function toggleItem(idx) {
-      currentGame.completed[idx] = !currentGame.completed[idx];
-      currentGame.completedCount = currentGame.completed.filter(Boolean).length;
-      db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).update({
-        completedCount: currentGame.completedCount,
-        completedItems: currentGame.completed,
-        timestamp: Date.now()
+      // --- Leaderboard loader ---
+      function loadLeaderboard() {
+        const leaderboardTable = document.getElementById('leaderboardTable');
+        leaderboardTable.innerHTML = "Loading...";
+        db.ref(PLAYERS_PATH).once('value').then(snap => {
+          const allPlayers = [];
+          snap.forEach(gameSnap => {
+            const gamePlayers = gameSnap.val();
+            if (typeof gamePlayers === 'object') {
+              Object.values(gamePlayers).forEach(player => {
+                allPlayers.push({
+                  name: player.name,
+                  completedCount: player.completedCount || 0,
+                  totalItems: player.totalItems || 0
+                });
+              });
+            }
+          });
+          allPlayers.sort((a,b) => (b.completedCount/b.totalItems)-(a.completedCount/a.totalItems));
+          let html = `<table class="leaderboard-table">
+            <tr><th>Player</th><th>Completed</th><th>Total</th><th>%</th></tr>`;
+          for (let p of allPlayers) {
+            const pct = p.totalItems ? Math.round(100*p.completedCount/p.totalItems) : 0;
+            html += `<tr><td>${p.name}</td><td>${p.completedCount}</td><td>${p.totalItems}</td><td>${pct}%</td></tr>`;
+          }
+          html += `</table>`;
+          leaderboardTable.innerHTML = html;
+        });
+      }
+
+      // --- Modal close helper ---
+      function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+      }
+
+      // --- Attach event listener for rejoin form ---
+      document.querySelector('#rejoinGameModal form').addEventListener('submit', rejoinSelectedGame);
+
+      // --- For safety: hide all sections on page load except mainMenu ---
+      document.addEventListener('DOMContentLoaded', ()=>{
+        backToMenu();
       });
-      updateProgress();
-      generateChecklist();
-    }
-
-    // ... (rest of your unchanged code: updateProgress, generateChecklist, etc.) ...
-
-    // Attach event listener for rejoin form
-    document.querySelector('#rejoinGameModal form').addEventListener('submit', rejoinSelectedGame);
-
-    // ... (rest of your modal handling, window events, utilities unchanged) ...
-  </script>
+    </script>
   </div>
 </body>
 </html>
