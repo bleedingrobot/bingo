@@ -455,11 +455,9 @@ function showGameBoard() {
   document.getElementById('leaderboard').style.display = 'none';
   document.getElementById('gameBoard').style.display = 'block';
   document.body.className = `theme-${currentGame.themeKey}`;
-  // Show chat
   document.getElementById('chatSection').style.display = 'block';
   db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).once('value').then(snap => {
     const player = snap.val();
-    // Use the player's unique board if it exists, otherwise fallback to game items
     currentGame.items = player && player.items ? player.items : currentGame.items;
     currentGame.completed = player && player.completed
       ? player.completed
@@ -474,9 +472,52 @@ function showGameBoard() {
     generateChecklist();
     updateProgress();
     updateLiveLeaderboardUI();
+    addInviteButton(); // <-- Add invite button here
   });
   listenForChat();
 }
+
+function getInviteLink(gameId) {
+  // Use the provided hosting URL
+  return `https://bleedingrobot.github.io/bingo/index.html?invite=${encodeURIComponent(gameId)}`;
+}
+
+function copyInviteLink(gameId) {
+  const link = getInviteLink(gameId);
+  navigator.clipboard.writeText(link).then(() => {
+    alert('Invite link copied to clipboard!');
+  }, () => {
+    prompt('Copy this invite link:', link);
+  });
+}
+
+// Add an Invite button to the game board UI when a game is active
+function addInviteButton() {
+  const header = document.querySelector('.game-header');
+  if (!header || document.getElementById('inviteBtn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'inviteBtn';
+  btn.className = 'btn';
+  btn.style.margin = '0 0 15px 10px';
+  btn.textContent = 'Invite Player';
+  btn.onclick = function() { copyInviteLink(currentGameId); };
+  header.appendChild(btn);
+}
+
+// On page load, check for invite code in URL and pre-select the game in the join modal
+window.addEventListener('DOMContentLoaded', function() {
+  const params = new URLSearchParams(window.location.search);
+  const invite = params.get('invite');
+  if (invite) {
+    showJoinGameModal();
+    setTimeout(() => {
+      // Try to select the invited game radio button
+      const radio = document.getElementById('game_radio_' + invite);
+      if (radio) radio.checked = true;
+    }, 500);
+  }
+});
+
 function generateChecklist(readOnly = false) {
   const container = document.getElementById('checklistContainer');
   container.innerHTML = '';
@@ -642,14 +683,15 @@ window.addEventListener('keydown', function(e) {
 
 // Utility: autofocus on input when modal is shown
 // Only focus the first input if nothing is already focused
-// (Prevents focus jumping from password to name)
+// (Prevents focus jumping from password to name or interfering with selects)
 document.querySelectorAll('.modal').forEach(modal => {
   modal.addEventListener('transitionend', function() {
     if (modal.style.display === 'block') {
-      // Only focus if no input is already focused in this modal
+      // Only focus if no input or select is already focused in this modal
       const active = document.activeElement;
-      if (!modal.contains(active) || active.tagName !== 'INPUT') {
-        const input = modal.querySelector('input[type="text"], input[type="password"]');
+      if (!modal.contains(active) || (active.tagName !== 'INPUT' && active.tagName !== 'SELECT')) {
+        // Prefer focusing the first visible input or select
+        const input = modal.querySelector('input[type="text"], input[type="password"], select');
         if (input) input.focus();
       }
     }
