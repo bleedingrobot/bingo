@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🟪🟩🟥🟦 PD Bingo Multiplayer</title>
+  <title>🟪🟩🟥🟦 V 2 PDB Multiplay</title>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
   <style>
@@ -200,6 +199,10 @@
           <div class="form-group" style="margin-top:12px;">
             <label for="playerNameJoin">Your Player Name:</label>
             <input type="text" id="playerNameJoin" required maxlength="20" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label for="playerPasswordJoin">Password:</label>
+            <input type="password" id="playerPasswordJoin" required maxlength="20" placeholder="Create a password">
           </div>
           <button type="submit" class="btn btn-success">Join Selected Game</button>
           <button type="button" class="btn" onclick="closeModal('joinGameModal')">Cancel</button>
@@ -761,13 +764,16 @@ function closeModal(modalId) {
 function joinSelectedGame(e) {
   e.preventDefault();
   const playerName = document.getElementById('playerNameJoin').value.trim();
+  const playerPassword = document.getElementById('playerPasswordJoin').value.trim();
   const gameId = (document.querySelector('input[name="gameSelect"]:checked')||{}).value;
   if (!playerName) return alert("Please enter your name!");
+  if (!playerPassword) return alert("Please enter a password!");
   if (!gameId) return alert("Please select a game!");
-  joinGame(gameId, playerName);
+  joinGame(gameId, playerName, playerPassword);
   closeModal('joinGameModal');
 }
-function joinGame(gameId, playerName) {
+
+function joinGame(gameId, playerName, playerPassword) {
   db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(snapshot => {
     const game = snapshot.val();
     if (!game) return alert("Game not found!");
@@ -775,9 +781,11 @@ function joinGame(gameId, playerName) {
     currentGameId = gameId;
     currentPlayerName = playerName;
     currentPlayerId = playerName.replace(/\W/g,"") + "_" + Date.now();
+    // Save password (in production, hash it!)
     db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).set({
       id: currentPlayerId,
       name: playerName,
+      password: playerPassword, // Store password
       completedCount: 0,
       totalItems: game.items.length,
       timestamp: Date.now()
@@ -947,8 +955,19 @@ window.addEventListener('resize', function() {
   container.className = `checklist-grid ${window.innerWidth<800?'mobile':'desktop'}`;
 });
 
-
-
+<!-- Add a button or link to show rejoin form -->
+<button type="button" class="btn" onclick="showRejoinForm()">Rejoin as Existing Player</button>
+<div id="rejoinForm" style="display:none;">
+  <div class="form-group">
+    <label for="rejoinPlayerName">Select Your Name:</label>
+    <select id="rejoinPlayerName"></select>
+  </div>
+  <div class="form-group">
+    <label for="rejoinPassword">Password:</label>
+    <input type="password" id="rejoinPassword" required maxlength="20" placeholder="Enter your password">
+  </div>
+  <button type="button" class="btn btn-success" onclick="rejoinGame()">Rejoin Game</button>
+</div>
   </script>
 </body>
 </html>
