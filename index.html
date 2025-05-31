@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🟪🟩🟥🟦 V2 PD Bingo Multiplayer</title>
+  <title>🟪🟩🟥🟦 V3 PD Bingo Multiplayer</title>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
   <style>
@@ -351,7 +351,7 @@
         const playerName = document.getElementById('playerNameJoin').value.trim();
         const password = document.getElementById('playerPasswordJoin').value;
         const password2 = document.getElementById('playerPasswordJoin2').value;
-        const gameId = (document.querySelector('input[name="gameSelect"]:checked')||{}).value;
+        const gameId = (document.querySelector('input[name="gameSelect"]:checked")||{}).value;
         if (!playerName) return alert("Please enter your name!");
         if (!password) return alert("Please enter a password!");
         if (password.length < 3) return alert("Password should be at least 3 characters.");
@@ -410,7 +410,7 @@
         e.preventDefault();
         const playerName = document.getElementById('playerNameRejoin').value.trim();
         const password = document.getElementById('playerPasswordRejoin').value;
-        const gameId = (document.querySelector('input[name="rejoinGameSelect"]:checked')||{}).value;
+        const gameId = (document.querySelector('input[name="rejoinGameSelect"]:checked")||{}).value;
         if (!playerName) return alert("Please enter your name!");
         if (!password) return alert("Please enter your password!");
         if (!gameId) return alert("Please select a game!");
