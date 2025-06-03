@@ -77,16 +77,6 @@
       <div id="liveGamesList"></div>
     </div>
 
-    <!-- Admin Create Game Form (hidden by default) -->
-    <form id="createGameForm" style="display:none">
-      <input type="text" name="gameName" placeholder="Game Name">
-      <button type="submit">Create</button>
-    </form>
-    <form id="addItemForm" style="display:none">
-      <input type="text" name="item" placeholder="Item">
-      <button type="submit">Add</button>
-    </form>
-
     <div id="mainMenu" class="main-menu">
       <div class="menu-card" onclick="showJoinGameModal()">
         <h3>Join Game</h3>
@@ -103,6 +93,10 @@
       <div class="menu-card" onclick="showRejoinForm()">
         <h3>Rejoin Game</h3>
         <p>Continue as an existing player</p>
+      </div>
+      <div class="menu-card" onclick="showHallOfVictors()">
+        <h3>Hall of Victors</h3>
+        <p>See results from finished games</p>
       </div>
     </div>
     <div id="gameBoard" class="game-board" style="display:none;">
@@ -145,6 +139,8 @@
           <button onclick="showAdminTab('createGameTab')" class="btn">Create Game</button>
           <button onclick="showAdminTab('manageItemsTab')" class="btn">Manage Items</button>
           <button onclick="showAdminTab('gamesListTab')" class="btn">Manage Games</button>
+          <button onclick="showAdminTab('hallVictorsAdminTab')" class="btn">Manage Hall of Victors</button>
+          <button onclick="adminCreateFakeGame()" class="btn btn-warning">Create Fake Game</button>
         </div>
         <div id="createGameTab" style="display:none;">
           <h3>Create Game</h3>
@@ -178,6 +174,25 @@
         <div id="gamesListTab" style="display:none;">
           <h3>Manage Games</h3>
           <div id="adminGamesList"></div>
+          <div style="margin-top:16px;">
+            <button class="btn btn-warning" onclick="
+              var games = document.querySelectorAll('#adminGamesList .game-admin-list');
+              if (!games.length) { alert('No games to finish.'); return; }
+              var gameNames = Array.from(games).map(g => g.querySelector('b').textContent);
+              var gameIds = Array.from(games).map(g => {
+                var btn = g.querySelector('button[onclick^=adminDeleteGame]');
+                return btn ? btn.getAttribute('onclick').match(/'([^']+)'/)[1] : null;
+              });
+              var options = gameNames.map((name,i)=>`${i+1}: ${name}`).join('\n');
+              var idx = prompt('Enter the number of the game to finish:\n'+options);
+              if (!idx || isNaN(idx) || idx<1 || idx>gameIds.length) return;
+              adminFinishGame(gameIds[idx-1]);
+            ">Finish Game</button>
+          </div>
+        </div>
+        <div id="hallVictorsAdminTab" style="display:none;">
+          <h3>Manage Hall of Victors</h3>
+          <div id="hallVictorsAdminList"></div>
         </div>
         <button type="button" class="btn" onclick="closeModal('adminGameModal')">Close</button>
       </div>
@@ -219,7 +234,7 @@
       <div style="font-size:1.08rem; margin-bottom:18px; color:#444;">
         This was made by <b>James Riley</b>.<br>
         I'm just starting out as a wedding celebrant, MC, and public speaker.<br>
-        If you've ever seen me do any of these things, it would be amazing if you could leave a 5-star review on both Google and Facebook.<br>
+        If you've ever seen me do any of these things, it would be amazing if you could leave a 5-star review ob both Google and Facebook.<br>:
       </div>
       <div style="display:flex; flex-wrap:wrap; gap:16px; justify-content:center; margin-bottom:10px;">
         <a href="https://g.page/r/CTq9n3S22SYBEBM/review" target="_blank" rel="noopener" class="btn btn-success" style="width:auto; min-width:180px;">Google Review</a>

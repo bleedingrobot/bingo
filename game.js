@@ -186,7 +186,7 @@ function updateLiveGamesSection() {
           `</div>
         </div>`;
       });
-      if (!html) html = "<em>No games currently running! Ask an admin to create a game.</em>";
+      if (!html) html = "<em>No games currently running! Create one!</em>";
       gamesListDiv.innerHTML = html;
     });
   });
@@ -208,6 +208,8 @@ function renderAdminGamesList() {
       }
       let html = "";
       Object.values(games).forEach(game => {
+        // Only show open games (not finished/archived)
+        if (game.isOpen === false) return;
         const players = (allPlayers[game.id] ? Object.values(allPlayers[game.id]) : []);
         html += `<div class="game-admin-list">
           <b>${game.name}</b> <span style="color:#888;">(${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name})</span>
@@ -219,9 +221,11 @@ function renderAdminGamesList() {
           <div class="admin-btn-row">
             <button class="btn btn-danger" onclick="adminDeleteGame('${game.id}')">Delete Game</button>
             <button class="btn btn-danger" onclick="adminResetPlayers('${game.id}')">Remove All Players</button>
+            <button class="btn btn-success" onclick="adminFinishGame('${game.id}')">Finish Game</button>
           </div>
         </div>`;
       });
+      if (!html) html = "<em>No open games to manage.</em>";
       target.innerHTML = html;
     });
   });
@@ -236,100 +240,87 @@ function adminResetPlayers(gameId) {
   if (!confirm("Are you sure you want to remove all players from this game?")) return;
   db.ref(PLAYERS_PATH + "/" + gameId).remove().then(renderAdminGamesList);
 }
+function adminFinishGame(gameId) {
+  if (!confirm("Are you sure you want to finish this game? This will archive the results and close the game for new players. The game will be removed from the admin list.")) return;
+  // Fetch all players for this game
+  db.ref(`${PLAYERS_PATH}/${gameId}`).once('value').then(snap => {
+    const players = snap.val() || {};
+    // Sort players by percentage (winner to loser)
+    const sorted = Object.values(players).map(p => ({
+      name: p.name,
+      percent: Math.round((p.completedCount||0)/(p.totalItems||1)*100),
+      completedCount: p.completedCount||0,
+      totalItems: p.totalItems||0,
+      timestamp: p.timestamp||0
+    })).sort((a, b) => b.percent - a.percent || b.completedCount - a.completedCount);
+    // Fetch game info
+    db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(gameSnap => {
+      const game = gameSnap.val();
+      if (!game) return alert("Game not found!");
+      // Store results in /bingo-multiplayer/finishedGames/{gameId}
+      db.ref(`bingo-multiplayer/finishedGames/${gameId}`).set({
+        id: gameId,
+        name: game.name,
+        theme: game.theme,
+        difficulty: game.difficulty,
+        items: game.items,
+        created: game.created,
+        finished: new Date().toISOString(),
+        results: sorted
+      }).then(() => {
+        // Remove game and players from active lists
+        db.ref(`${GAMES_PATH}/${gameId}`).remove().then(() => {
+          db.ref(`${PLAYERS_PATH}/${gameId}`).remove().then(() => {
+            alert("Game finished, archived, and removed from active games!");
+            renderAdminGamesList();
+          });
+        });
+      });
+    });
+  });
+}
 
 function showAdminTab(tabId) {
   document.getElementById('createGameTab').style.display = tabId === 'createGameTab' ? 'block' : 'none';
   document.getElementById('manageItemsTab').style.display = tabId === 'manageItemsTab' ? 'block' : 'none';
   document.getElementById('gamesListTab').style.display = tabId === 'gamesListTab' ? 'block' : 'none';
+  document.getElementById('hallVictorsAdminTab').style.display = tabId === 'hallVictorsAdminTab' ? 'block' : 'none';
   if (tabId === 'gamesListTab') renderAdminGamesList();
   if (tabId === 'manageItemsTab') fetchItemsAndRenderList();
+  if (tabId === 'hallVictorsAdminTab') renderHallVictorsAdminList();
 }
-function fetchItemsAndRenderList() {
-  db.ref(ITEM_PATH).once('value').then(snap => {
-    if (!snap.exists()) {
-      db.ref(ITEM_PATH).set(DEFAULT_ITEMS).then(() => {
-        allItems = [...DEFAULT_ITEMS];
-        renderItemList();
-      });
-    } else {
-      allItems = snap.val();
-      renderItemList();
+
+// Add a new tab for Hall of Victors admin
+function renderHallVictorsAdminList() {
+  const target = document.getElementById('hallVictorsAdminList');
+  target.innerHTML = 'Loading...';
+  db.ref('bingo-multiplayer/finishedGames').once('value').then(snap => {
+    const games = snap.val() || {};
+    if (!Object.keys(games).length) {
+      target.innerHTML = '<em>No finished games to manage.</em>';
+      return;
     }
-  });
-}
-function renderItemList() {
-  const ul = document.getElementById('itemList');
-  if (!ul) return;
-  ul.innerHTML = "";
-  allItems.forEach((item, idx) => {
-    const li = document.createElement('li');
-    li.textContent = item;
-    li.style.display = "flex";
-    li.style.alignItems = "center";
-    li.style.justifyContent = "space-between";
-    li.style.gap = "8px";
-    li.innerHTML += ` <button onclick="removeItem(${idx})" style="margin-left:14px;background:#e74c3c;color:white;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;">Remove</button>`;
-    ul.appendChild(li);
-  });
-}
-function addItemToDB(e) {
-  e.preventDefault();
-  const input = document.getElementById('newItemInput');
-  const val = input.value.trim();
-  if (!val) return alert("Enter an item!");
-  if (allItems.includes(val)) return alert("That item already exists!");
-  allItems.push(val);
-  db.ref(ITEM_PATH).set(allItems).then(() => {
-    input.value = "";
-    renderItemList();
-    alert("Item added!");
-  });
-}
-function removeItem(idx) {
-  if (!confirm("Remove this item?")) return;
-  allItems.splice(idx, 1);
-  db.ref(ITEM_PATH).set(allItems).then(renderItemList);
-}
-function resetAllItems() {
-  if (!confirm("Reset all items to original defaults? This will remove all additions and deletions.")) return;
-  db.ref(ITEM_PATH).set(DEFAULT_ITEMS).then(() => {
-    allItems = [...DEFAULT_ITEMS];
-    renderItemList();
-  });
-}
-function createGameFromAdmin(e) {
-  e.preventDefault();
-  const gameName = document.getElementById('adminGameName').value.trim();
-  const difficulty = document.getElementById('difficulty').value;
-  const theme = document.getElementById('theme').value;
-  if (!gameName) {
-    alert("Please enter a game name!");
-    return;
-  }
-  db.ref(ITEM_PATH).once('value').then(snap => {
-    const itemsArr = snap.val() || DEFAULT_ITEMS;
-    const diff = difficultySettings[difficulty];
-    const thm = themeSettings[theme];
-    const selectedItems = shuffleArray([...itemsArr]).slice(0, diff.total);
-    const gameId = gameName.replace(/\W/g,"") + "_" + Date.now();
-    db.ref(`${GAMES_PATH}/${gameId}`).set({
-      id: gameId,
-      name: gameName,
-      difficulty: diff,
-      difficultyKey: difficulty,
-      theme: thm,
-      themeKey: theme,
-      items: selectedItems,
-      created: new Date().toISOString(),
-      isOpen: true
-    }).then(()=>{
-      alert("Game created!");
-      closeModal('adminGameModal');
+    let html = '';
+    Object.values(games).sort((a,b)=>new Date(b.finished)-new Date(a.finished)).forEach(game => {
+      html += `<div class="game-admin-list">
+        <b>${game.name}</b> <span style="color:#888;">(${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name})</span>
+        <div style="font-size:0.96em;color:#555;margin-top:2px;">Players: <b>${game.results ? game.results.length : 0}</b></div>
+        <div class="admin-btn-row">
+          <button class="btn btn-danger" onclick="adminDeleteFinishedGame('${game.id}')">Delete from Hall</button>
+        </div>
+      </div>`;
     });
+    target.innerHTML = html;
   });
 }
-document.getElementById('createGameForm').addEventListener('submit', createGameFromAdmin);
-document.getElementById('addItemForm').addEventListener('submit', addItemToDB);
+
+function adminDeleteFinishedGame(gameId) {
+  if (!confirm('Are you sure you want to permanently delete this finished game from the Hall of Victors? This cannot be undone.')) return;
+  db.ref(`bingo-multiplayer/finishedGames/${gameId}`).remove().then(() => {
+    renderHallVictorsAdminList();
+    alert('Finished game deleted from Hall of Victors.');
+  });
+}
 
 function showAdminPanel() {
   const password = prompt("Enter admin password:");
@@ -426,25 +417,29 @@ function joinGame(gameId, playerName, playerPassword) {
       currentPlayerName = playerName;
       currentPlayerId = playerName.replace(/\W/g,"") + "_" + Date.now();
 
-      // Generate a unique, shuffled board for this player
-      const playerItems = shuffleArray([...game.items]);
-      db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).set({
-        id: currentPlayerId,
-        name: playerName,
-        password: playerPassword,
-        completed: Array(playerItems.length).fill(false),
-        completedCount: 0,
-        totalItems: playerItems.length,
-        items: playerItems,
-        timestamp: Date.now()
-      }).then(() => {
-        // Announce in chat
-        db.ref(`${CHAT_PATH}/${currentGameId}`).push({
-          name: "bingo",
-          text: `${playerName} has joined the game!`,
+      // Fetch the master item list and select a random subset for this player
+      db.ref(ITEM_PATH).once('value').then(itemSnap => {
+        const masterItems = itemSnap.val() || DEFAULT_ITEMS;
+        const numItems = game.items ? game.items.length : (game.difficulty && game.difficulty.total ? game.difficulty.total : 20);
+        const playerItems = shuffleArray([...masterItems]).slice(0, numItems);
+        db.ref(`${PLAYERS_PATH}/${currentGameId}/${currentPlayerId}`).set({
+          id: currentPlayerId,
+          name: playerName,
+          password: playerPassword,
+          completed: Array(playerItems.length).fill(false),
+          completedCount: 0,
+          totalItems: playerItems.length,
+          items: playerItems,
           timestamp: Date.now()
+        }).then(() => {
+          // Announce in chat
+          db.ref(`${CHAT_PATH}/${currentGameId}`).push({
+            name: "bingo",
+            text: `${playerName} has joined the game!`,
+            timestamp: Date.now()
+          });
+          showGameBoard();
         });
-        showGameBoard();
       });
     });
   });
@@ -524,25 +519,18 @@ function generateChecklist(readOnly = false) {
   currentGame.items.forEach((item, idx) => {
     const itemDiv = document.createElement('div');
     itemDiv.className = `checklist-item${currentGame.completed[idx] ? ' completed' : ''}`;
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.id = `item-${idx}`;
-    checkbox.checked = currentGame.completed[idx];
-    checkbox.disabled = readOnly; // <-- Disable if read-only
+    itemDiv.tabIndex = 0; // Make focusable for accessibility
     if (!readOnly) {
-      checkbox.addEventListener('change', () => toggleItem(idx));
-      // Make the whole itemDiv clickable (except when clicking the checkbox itself)
-      itemDiv.addEventListener('click', (e) => {
-        if (e.target !== checkbox) {
-          checkbox.checked = !checkbox.checked;
+      itemDiv.addEventListener('click', () => toggleItem(idx));
+      itemDiv.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
           toggleItem(idx);
         }
       });
     }
-    const label = document.createElement('label');
-    label.htmlFor = `item-${idx}`;
-    label.textContent = `${idx + 1}. ${item}`;
-    itemDiv.appendChild(checkbox);
+    const label = document.createElement('span');
+    label.textContent = item; // Removed numbering
     itemDiv.appendChild(label);
     container.appendChild(itemDiv);
   });
@@ -870,13 +858,41 @@ function listenForChat() {
     const chatDiv = document.getElementById('chatMessages');
     if (!chatDiv) return;
     const messages = snap.val() || {};
-    chatDiv.innerHTML = Object.values(messages).map(msg =>
+    const now = Date.now();
+    // Show all player messages forever, only remove system notifications after 2 minutes
+    const filtered = Object.values(messages).filter(msg =>
+      msg.name !== "bingo" || (now - (msg.timestamp || 0) <= 120000)
+    );
+    chatDiv.innerHTML = filtered.map(msg =>
       msg.name === "bingo"
         ? `<div style="color:#4CAF50;font-weight:bold;"><span>🎲 ${msg.text}</span></div>`
         : `<div><b style="color:#4285F4;">${msg.name}:</b> ${msg.text}</div>`
     ).join('');
     chatDiv.scrollTop = chatDiv.scrollHeight;
   });
+  // Set up interval to refresh chat every 10 seconds to remove expired system notifications
+  if (!window._chatRefreshInterval) {
+    window._chatRefreshInterval = setInterval(() => {
+      if (document.getElementById('chatMessages')) {
+        db.ref(`${CHAT_PATH}/${currentGameId}`).once('value').then(snap => {
+          const messages = snap.val() || {};
+          const now = Date.now();
+          const filtered = Object.values(messages).filter(msg =>
+            msg.name !== "bingo" || (now - (msg.timestamp || 0) <= 120000)
+          );
+          const chatDiv = document.getElementById('chatMessages');
+          if (chatDiv) {
+            chatDiv.innerHTML = filtered.map(msg =>
+              msg.name === "bingo"
+                ? `<div style=\"color:#4CAF50;font-weight:bold;\"><span>🎲 ${msg.text}</span></div>`
+                : `<div><b style=\"color:#4285F4;\">${msg.name}:</b> ${msg.text}</div>`
+            ).join('');
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+          }
+        });
+      }
+    }, 10000);
+  }
 }
 
 // Send a message
@@ -892,3 +908,139 @@ document.getElementById('chatForm').addEventListener('submit', function(e) {
   });
   input.value = '';
 });
+
+// --- ADMIN: Finish Game and Hall of Victors ---
+
+// 1. Finish Game: Store results in DB and mark game as finished
+function adminFinishGame(gameId) {
+  if (!confirm("Are you sure you want to finish this game? This will archive the results and close the game for new players. The game will be removed from the admin list.")) return;
+  // Fetch all players for this game
+  db.ref(`${PLAYERS_PATH}/${gameId}`).once('value').then(snap => {
+    const players = snap.val() || {};
+    // Sort players by percentage (winner to loser)
+    const sorted = Object.values(players).map(p => ({
+      name: p.name,
+      percent: Math.round((p.completedCount||0)/(p.totalItems||1)*100),
+      completedCount: p.completedCount||0,
+      totalItems: p.totalItems||0,
+      timestamp: p.timestamp||0
+    })).sort((a, b) => b.percent - a.percent || b.completedCount - a.completedCount);
+    // Fetch game info
+    db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(gameSnap => {
+      const game = gameSnap.val();
+      if (!game) return alert("Game not found!");
+      // Store results in /bingo-multiplayer/finishedGames/{gameId}
+      db.ref(`bingo-multiplayer/finishedGames/${gameId}`).set({
+        id: gameId,
+        name: game.name,
+        theme: game.theme,
+        difficulty: game.difficulty,
+        items: game.items,
+        created: game.created,
+        finished: new Date().toISOString(),
+        results: sorted
+      }).then(() => {
+        // Remove game and players from active lists
+        db.ref(`${GAMES_PATH}/${gameId}`).remove().then(() => {
+          db.ref(`${PLAYERS_PATH}/${gameId}`).remove().then(() => {
+            alert("Game finished, archived, and removed from active games!");
+            renderAdminGamesList();
+          });
+        });
+      });
+    });
+  });
+}
+
+// 2. Hall of Victors: Show finished games and their results
+function showHallOfVictors() {
+  document.getElementById('mainMenu').style.display = 'none';
+  let hallDiv = document.getElementById('hallOfVictors');
+  if (!hallDiv) {
+    hallDiv = document.createElement('div');
+    hallDiv.id = 'hallOfVictors';
+    hallDiv.innerHTML = `
+      <h2 style="text-align:center;margin-bottom:18px;">🏆 Hall of Victors 🏆</h2>
+      <div id="finishedGamesList" style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center;align-items:stretch;">Loading...</div>
+      <div id="finishedGameResults" style="margin-top:24px;"></div>
+      <div style="text-align:center;margin-top:30px;"><button class="btn" style="font-size:1.1em;padding:10px 28px;" onclick="hideHallOfVictors()">⬅️ Back to Menu</button></div>
+    `;
+    document.body.appendChild(hallDiv);
+  } else {
+    hallDiv.style.display = 'block';
+  }
+  // Fetch finished games
+  db.ref('bingo-multiplayer/finishedGames').once('value').then(snap => {
+    const games = snap.val() || {};
+    const listDiv = document.getElementById('finishedGamesList');
+    if (!Object.keys(games).length) {
+      listDiv.innerHTML = '<em>No finished games yet.</em>';
+      return;
+    }
+    listDiv.innerHTML = Object.values(games)
+      .sort((a,b)=>new Date(b.finished)-new Date(a.finished))
+      .map(g => {
+        // Winner info
+        const winner = g.results && g.results.length ? g.results[0] : null;
+        return `
+        <div class='victor-card' style="background:#fff;border-radius:14px;box-shadow:0 2px 10px #0001;padding:18px 22px;min-width:260px;max-width:320px;flex:1 1 260px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;">
+          <div style="font-size:1.15em;font-weight:bold;margin-bottom:6px;">${g.name}</div>
+          <div style="font-size:0.98em;color:#666;margin-bottom:8px;">${g.theme.emoji} ${g.theme.name} &bull; ${g.difficulty.emoji} ${g.difficulty.name}</div>
+          <div style="font-size:0.93em;color:#888;margin-bottom:10px;">${new Date(g.finished).toLocaleDateString()}<br><span style='font-size:0.92em;'>${new Date(g.finished).toLocaleTimeString()}</span></div>
+          <div style="margin-bottom:10px;">
+            <span style="font-size:1.1em;">🏅 Winner:</span> <span style="font-weight:bold;color:#2e7d32;">${winner ? winner.name : '—'}</span>
+          </div>
+          <div style="font-size:0.95em;color:#555;margin-bottom:10px;">Players: <b>${g.results ? g.results.length : 0}</b></div>
+          <button class="btn" style="margin-top:auto;" onclick="showFinishedGameResults('${g.id}')">View Results</button>
+        </div>
+        `;
+      }).join('');
+    document.getElementById('finishedGameResults').innerHTML = '';
+  });
+}
+
+function showFinishedGameResults(gameId) {
+  db.ref(`bingo-multiplayer/finishedGames/${gameId}`).once('value').then(snap => {
+    const game = snap.val();
+    if (!game) return;
+    const results = game.results || [];
+    // Medals for top 3
+    const medals = ['🥇','🥈','🥉'];
+    document.getElementById('finishedGameResults').innerHTML = `
+      <div class='victor-results-card' style="background:#fff;border-radius:16px;box-shadow:0 2px 12px #0002;padding:28px 18px 18px 18px;max-width:520px;margin:0 auto 24px auto;">
+        <div style="font-size:1.3em;font-weight:bold;text-align:center;margin-bottom:8px;">${game.name}</div>
+        <div style="font-size:1.05em;text-align:center;color:#666;margin-bottom:8px;">${game.theme.emoji} ${game.theme.name} &bull; ${game.difficulty.emoji} ${game.difficulty.name}</div>
+        <div style="font-size:0.98em;text-align:center;color:#888;margin-bottom:16px;">${new Date(game.finished).toLocaleString()}</div>
+        <table class='table' style='width:100%;max-width:420px;margin:0 auto 0 auto;'>
+          <thead><tr><th>Place</th><th>Name</th><th>Score</th><th>Percent</th></tr></thead>
+          <tbody>
+            ${results.map((p,i)=>{
+              let style = '';
+              if(i===0) style = 'background:#e8f5e9;font-weight:bold;color:#2e7d32;';
+              else if(i===1) style = 'background:#f3e5f5;font-weight:bold;color:#7b1fa2;';
+              else if(i===2) style = 'background:#fffde7;font-weight:bold;color:#fbc02d;';
+              return `<tr style='${style}'>
+                <td style='font-size:1.2em;'>${medals[i]||i+1}</td>
+                <td>${p.name}</td>
+                <td>${p.completedCount}/${p.totalItems}</td>
+                <td>${p.percent}%</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+        <div style="text-align:center;margin-top:18px;">
+          <button class="btn" style="font-size:1em;padding:7px 22px;" onclick="showHallOfVictors()">⬅️ Back to Hall</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function hideHallOfVictors() {
+  const hallDiv = document.getElementById('hallOfVictors');
+  if (hallDiv) hallDiv.style.display = 'none';
+  document.getElementById('mainMenu').style.display = 'grid';
+  // Optionally clear results to avoid stale content
+  const resultsDiv = document.getElementById('finishedGameResults');
+  if (resultsDiv) resultsDiv.innerHTML = '';
+}

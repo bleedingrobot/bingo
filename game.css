@@ -420,3 +420,45 @@ body {
     padding: 10px 0;
   }
 }
+
+/* Hall of Victors styles */
+.victor-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px #0001;
+  padding: 18px 22px;
+  min-width: 260px;
+  max-width: 320px;
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.victor-card:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 4px 18px #0002;
+}
+.victor-results-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px #0002;
+  padding: 28px 18px 18px 18px;
+  max-width: 520px;
+  margin: 0 auto 24px auto;
+}
+
+/* Responsive tweaks for Hall of Victors */
+@media (max-width: 700px) {
+  .victor-card {
+    min-width: 90vw;
+    max-width: 98vw;
+    padding: 12px 6vw;
+  }
+  .victor-results-card {
+    padding: 18px 2vw 12px 2vw;
+    max-width: 98vw;
+  }
+}
