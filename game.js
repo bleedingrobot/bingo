@@ -142,6 +142,7 @@ const GAMES_PATH = "bingo-multiplayer/games";
 const PLAYERS_PATH = "bingo-multiplayer/players";
 const ITEM_PATH = "bingo-multiplayer/items";
 const CHAT_PATH = "bingo-multiplayer/chat";
+const ITEM_LISTS_PATH = "bingo-multiplayer/itemLists";
 let allItems = [];
 let currentGame = null;
 let currentGameId = null;
@@ -149,6 +150,8 @@ let currentPlayerId = null;
 let currentPlayerName = null;
 let spectatingPlayerId = null;
 let spectatingGameId = null;
+let allItemLists = {};
+let currentListId = "default";
 
 // Live Games/Players display (home page)
 function updateLiveGamesSection() {
@@ -164,7 +167,14 @@ function updateLiveGamesSection() {
       }
       Object.values(games).forEach(game => {
         if (!game.isOpen) return;
-        const players = (allPlayers[game.id] ? Object.values(allPlayers[game.id]) : []);
+        let players = (allPlayers[game.id] ? Object.values(allPlayers[game.id]) : []);
+        // Sort players by percent (highest first), then by completedCount
+        players = players.sort((a, b) => {
+          const aPercent = Math.round((a.completedCount || 0) / (a.totalItems || 1) * 100);
+          const bPercent = Math.round((b.completedCount || 0) / (b.totalItems || 1) * 100);
+          if (bPercent !== aPercent) return bPercent - aPercent;
+          return (b.completedCount || 0) - (a.completedCount || 0);
+        });
         html += `<div style="margin-bottom:18px;">
           <b style="color:#000;">${game.name}</b>
           <span style="color:#000;font-size:0.95em;">
@@ -186,7 +196,7 @@ function updateLiveGamesSection() {
           `</div>
         </div>`;
       });
-      if (!html) html = "<em>No games currently running! Create one!</em>";
+      if (!html) html = "<em>No games currently running! Ask an admin to create a game.</em>";
       gamesListDiv.innerHTML = html;
     });
   });
@@ -208,8 +218,6 @@ function renderAdminGamesList() {
       }
       let html = "";
       Object.values(games).forEach(game => {
-        // Only show open games (not finished/archived)
-        if (game.isOpen === false) return;
         const players = (allPlayers[game.id] ? Object.values(allPlayers[game.id]) : []);
         html += `<div class="game-admin-list">
           <b>${game.name}</b> <span style="color:#888;">(${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name})</span>
@@ -221,11 +229,9 @@ function renderAdminGamesList() {
           <div class="admin-btn-row">
             <button class="btn btn-danger" onclick="adminDeleteGame('${game.id}')">Delete Game</button>
             <button class="btn btn-danger" onclick="adminResetPlayers('${game.id}')">Remove All Players</button>
-            <button class="btn btn-success" onclick="adminFinishGame('${game.id}')">Finish Game</button>
           </div>
         </div>`;
       });
-      if (!html) html = "<em>No open games to manage.</em>";
       target.innerHTML = html;
     });
   });
@@ -240,86 +246,110 @@ function adminResetPlayers(gameId) {
   if (!confirm("Are you sure you want to remove all players from this game?")) return;
   db.ref(PLAYERS_PATH + "/" + gameId).remove().then(renderAdminGamesList);
 }
-function adminFinishGame(gameId) {
-  if (!confirm("Are you sure you want to finish this game? This will archive the results and close the game for new players. The game will be removed from the admin list.")) return;
-  // Fetch all players for this game
-  db.ref(`${PLAYERS_PATH}/${gameId}`).once('value').then(snap => {
-    const players = snap.val() || {};
-    // Sort players by percentage (winner to loser)
-    const sorted = Object.values(players).map(p => ({
-      name: p.name,
-      percent: Math.round((p.completedCount||0)/(p.totalItems||1)*100),
-      completedCount: p.completedCount||0,
-      totalItems: p.totalItems||0,
-      timestamp: p.timestamp||0
-    })).sort((a, b) => b.percent - a.percent || b.completedCount - a.completedCount);
-    // Fetch game info
-    db.ref(`${GAMES_PATH}/${gameId}`).once('value').then(gameSnap => {
-      const game = gameSnap.val();
-      if (!game) return alert("Game not found!");
-      // Store results in /bingo-multiplayer/finishedGames/{gameId}
-      db.ref(`bingo-multiplayer/finishedGames/${gameId}`).set({
-        id: gameId,
-        name: game.name,
-        theme: game.theme,
-        difficulty: game.difficulty,
-        items: game.items,
-        created: game.created,
-        finished: new Date().toISOString(),
-        results: sorted
-      }).then(() => {
-        // Remove game and players from active lists
-        db.ref(`${GAMES_PATH}/${gameId}`).remove().then(() => {
-          db.ref(`${PLAYERS_PATH}/${gameId}`).remove().then(() => {
-            alert("Game finished, archived, and removed from active games!");
-            renderAdminGamesList();
-          });
-        });
-      });
-    });
-  });
-}
 
 function showAdminTab(tabId) {
   document.getElementById('createGameTab').style.display = tabId === 'createGameTab' ? 'block' : 'none';
   document.getElementById('manageItemsTab').style.display = tabId === 'manageItemsTab' ? 'block' : 'none';
+  document.getElementById('manageListsTab').style.display = tabId === 'manageListsTab' ? 'block' : 'none';
   document.getElementById('gamesListTab').style.display = tabId === 'gamesListTab' ? 'block' : 'none';
-  document.getElementById('hallVictorsAdminTab').style.display = tabId === 'hallVictorsAdminTab' ? 'block' : 'none';
   if (tabId === 'gamesListTab') renderAdminGamesList();
   if (tabId === 'manageItemsTab') fetchItemsAndRenderList();
-  if (tabId === 'hallVictorsAdminTab') renderHallVictorsAdminList();
+  if (tabId === 'manageListsTab') fetchItemListsAndRender();
 }
 
-// Add a new tab for Hall of Victors admin
-function renderHallVictorsAdminList() {
-  const target = document.getElementById('hallVictorsAdminList');
-  target.innerHTML = 'Loading...';
-  db.ref('bingo-multiplayer/finishedGames').once('value').then(snap => {
-    const games = snap.val() || {};
-    if (!Object.keys(games).length) {
-      target.innerHTML = '<em>No finished games to manage.</em>';
-      return;
-    }
-    let html = '';
-    Object.values(games).sort((a,b)=>new Date(b.finished)-new Date(a.finished)).forEach(game => {
-      html += `<div class="game-admin-list">
-        <b>${game.name}</b> <span style="color:#888;">(${game.theme.emoji} ${game.theme.name}, ${game.difficulty.emoji} ${game.difficulty.name})</span>
-        <div style="font-size:0.96em;color:#555;margin-top:2px;">Players: <b>${game.results ? game.results.length : 0}</b></div>
-        <div class="admin-btn-row">
-          <button class="btn btn-danger" onclick="adminDeleteFinishedGame('${game.id}')">Delete from Hall</button>
-        </div>
-      </div>`;
+// --- Item Lists Management ---
+function fetchItemListsAndRender() {
+  db.ref(ITEM_LISTS_PATH).once('value').then(snap => {
+    allItemLists = snap.val() || { default: { id: "default", name: "Default", items: DEFAULT_ITEMS } };
+    renderItemListsPanel();
+    populateItemListSelectors();
+    // If a list is being edited, refresh its panel
+    if (currentListId && allItemLists[currentListId]) editItemList(currentListId);
+    else document.getElementById('editListPanel').innerHTML = '';
+  });
+}
+
+function renderItemListsPanel() {
+  const panel = document.getElementById('itemListsPanel');
+  if (!panel) return;
+  let html = Object.values(allItemLists).map(list =>
+    `<div style="margin-bottom:8px;">
+      <b>${list.name}</b>
+      <button class="btn" onclick="editItemList('${list.id}')">Edit</button>
+      ${list.id !== 'default' ? `<button class="btn btn-danger" onclick="deleteItemList('${list.id}')">Delete</button>` : '<span style="color:#aaa;font-size:0.95em;">(cannot delete default)</span>'}
+    </div>`
+  ).join('');
+  panel.innerHTML = html;
+}
+
+function populateItemListSelectors() {
+  const selects = [document.getElementById('adminItemListSelect'), document.getElementById('playerItemListSelect')];
+  selects.forEach(sel => {
+    if (!sel) return;
+    sel.innerHTML = Object.values(allItemLists).map(list =>
+      `<option value="${list.id}">${list.name}</option>`
+    ).join('');
+  });
+}
+
+// Add event listener for addListForm if not already present
+setTimeout(() => {
+  const addListForm = document.getElementById('addListForm');
+  if (addListForm && !addListForm._bound) {
+    addListForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('newListName').value.trim();
+      if (!name) return;
+      const id = name.replace(/\W/g, "").toLowerCase() + "_" + Date.now();
+      db.ref(`${ITEM_LISTS_PATH}/${id}`).set({ id, name, items: [] }).then(fetchItemListsAndRender);
+      document.getElementById('newListName').value = '';
     });
-    target.innerHTML = html;
-  });
+    addListForm._bound = true;
+  }
+}, 500);
+
+function editItemList(listId) {
+  currentListId = listId;
+  const list = allItemLists[listId];
+  const panel = document.getElementById('editListPanel');
+  if (!panel) return;
+  let html = `<h4>Edit List: ${list.name}</h4>`;
+  html += `<ul id='editListItems'>` + list.items.map((item, idx) =>
+    `<li>${item} <button onclick="removeItemFromList('${list.id}',${idx})" class="btn btn-danger">Remove</button></li>`
+  ).join('') + `</ul>`;
+  html += `<form id='addItemToListForm' style='margin-top:8px;'><input type='text' id='addItemToListInput' placeholder='New Item'><button type='submit' class='btn btn-success'>Add</button></form>`;
+  panel.innerHTML = html;
+  setTimeout(() => {
+    const addItemForm = document.getElementById('addItemToListForm');
+    if (addItemForm && !addItemForm._bound) {
+      addItemForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const val = document.getElementById('addItemToListInput').value.trim();
+        if (!val) return;
+        db.ref(`${ITEM_LISTS_PATH}/${listId}/items`).transaction(items => {
+          items = Array.isArray(items) ? items : [];
+          if (items.includes(val)) return;
+          items.push(val);
+          return items;
+        }, fetchItemListsAndRender);
+        document.getElementById('addItemToListInput').value = '';
+      });
+      addItemForm._bound = true;
+    }
+  }, 100);
 }
 
-function adminDeleteFinishedGame(gameId) {
-  if (!confirm('Are you sure you want to permanently delete this finished game from the Hall of Victors? This cannot be undone.')) return;
-  db.ref(`bingo-multiplayer/finishedGames/${gameId}`).remove().then(() => {
-    renderHallVictorsAdminList();
-    alert('Finished game deleted from Hall of Victors.');
-  });
+function removeItemFromList(listId, idx) {
+  const list = allItemLists[listId];
+  if (!list) return;
+  list.items.splice(idx, 1);
+  db.ref(`${ITEM_LISTS_PATH}/${listId}/items`).set(list.items).then(fetchItemListsAndRender);
+}
+
+function deleteItemList(listId) {
+  if (listId === 'default') return alert('Cannot delete the default list!');
+  if (!confirm('Delete this list?')) return;
+  db.ref(`${ITEM_LISTS_PATH}/${listId}`).remove().then(fetchItemListsAndRender);
 }
 
 function showAdminPanel() {
@@ -331,10 +361,12 @@ function showAdminPanel() {
   showAdminTab('createGameTab');
   document.getElementById('adminGameModal').style.display = 'block';
   fetchItemsAndRenderList();
+  fetchItemListsAndRender();
 }
 
 // --- Player Create Game Modal logic ---
 function showPlayerCreateGameModal() {
+  fetchItemListsAndRender();
   document.getElementById('playerCreateGameModal').style.display = 'block';
 }
 document.getElementById('playerCreateGameForm').addEventListener('submit', function(e) {
@@ -342,14 +374,15 @@ document.getElementById('playerCreateGameForm').addEventListener('submit', funct
   const gameName = document.getElementById('playerGameName').value.trim();
   const difficulty = document.getElementById('playerDifficulty').value;
   const theme = document.getElementById('playerTheme').value;
+  const listId = document.getElementById('playerItemListSelect').value;
   if (!gameName) return alert("Please enter a game name!");
-  db.ref("bingo-multiplayer/items").once('value').then(snap => {
-    const itemsArr = snap.val() || DEFAULT_ITEMS;
+  db.ref(`${ITEM_LISTS_PATH}/${listId}`).once('value').then(snap => {
+    const itemsArr = (snap.val() && snap.val().items) || DEFAULT_ITEMS;
     const diff = difficultySettings[difficulty];
     const thm = themeSettings[theme];
     const selectedItems = shuffleArray([...itemsArr]).slice(0, diff.total);
     const gameId = gameName.replace(/\W/g,"") + "_" + Date.now();
-    db.ref(`bingo-multiplayer/games/${gameId}`).set({
+    db.ref(`${GAMES_PATH}/${gameId}`).set({
       id: gameId,
       name: gameName,
       difficulty: diff,
@@ -357,11 +390,11 @@ document.getElementById('playerCreateGameForm').addEventListener('submit', funct
       theme: thm,
       themeKey: theme,
       items: selectedItems,
+      itemListId: listId,
       created: new Date().toISOString(),
       isOpen: true
     }).then(()=>{
       closeModal('playerCreateGameModal');
-      // No auto-join for creator
     });
   });
 });
@@ -858,41 +891,13 @@ function listenForChat() {
     const chatDiv = document.getElementById('chatMessages');
     if (!chatDiv) return;
     const messages = snap.val() || {};
-    const now = Date.now();
-    // Show all player messages forever, only remove system notifications after 2 minutes
-    const filtered = Object.values(messages).filter(msg =>
-      msg.name !== "bingo" || (now - (msg.timestamp || 0) <= 120000)
-    );
-    chatDiv.innerHTML = filtered.map(msg =>
+    chatDiv.innerHTML = Object.values(messages).map(msg =>
       msg.name === "bingo"
         ? `<div style="color:#4CAF50;font-weight:bold;"><span>🎲 ${msg.text}</span></div>`
         : `<div><b style="color:#4285F4;">${msg.name}:</b> ${msg.text}</div>`
     ).join('');
     chatDiv.scrollTop = chatDiv.scrollHeight;
   });
-  // Set up interval to refresh chat every 10 seconds to remove expired system notifications
-  if (!window._chatRefreshInterval) {
-    window._chatRefreshInterval = setInterval(() => {
-      if (document.getElementById('chatMessages')) {
-        db.ref(`${CHAT_PATH}/${currentGameId}`).once('value').then(snap => {
-          const messages = snap.val() || {};
-          const now = Date.now();
-          const filtered = Object.values(messages).filter(msg =>
-            msg.name !== "bingo" || (now - (msg.timestamp || 0) <= 120000)
-          );
-          const chatDiv = document.getElementById('chatMessages');
-          if (chatDiv) {
-            chatDiv.innerHTML = filtered.map(msg =>
-              msg.name === "bingo"
-                ? `<div style=\"color:#4CAF50;font-weight:bold;\"><span>🎲 ${msg.text}</span></div>`
-                : `<div><b style=\"color:#4285F4;\">${msg.name}:</b> ${msg.text}</div>`
-            ).join('');
-            chatDiv.scrollTop = chatDiv.scrollHeight;
-          }
-        });
-      }
-    }, 10000);
-  }
 }
 
 // Send a message
@@ -913,7 +918,7 @@ document.getElementById('chatForm').addEventListener('submit', function(e) {
 
 // 1. Finish Game: Store results in DB and mark game as finished
 function adminFinishGame(gameId) {
-  if (!confirm("Are you sure you want to finish this game? This will archive the results and close the game for new players. The game will be removed from the admin list.")) return;
+  if (!confirm("Are you sure you want to finish this game? This will archive the results and close the game for new players.")) return;
   // Fetch all players for this game
   db.ref(`${PLAYERS_PATH}/${gameId}`).once('value').then(snap => {
     const players = snap.val() || {};
@@ -940,12 +945,10 @@ function adminFinishGame(gameId) {
         finished: new Date().toISOString(),
         results: sorted
       }).then(() => {
-        // Remove game and players from active lists
-        db.ref(`${GAMES_PATH}/${gameId}`).remove().then(() => {
-          db.ref(`${PLAYERS_PATH}/${gameId}`).remove().then(() => {
-            alert("Game finished, archived, and removed from active games!");
-            renderAdminGamesList();
-          });
+        // Mark game as closed
+        db.ref(`${GAMES_PATH}/${gameId}/isOpen`).set(false).then(() => {
+          alert("Game finished and results archived!");
+          renderAdminGamesList();
         });
       });
     });
@@ -1004,8 +1007,38 @@ function showFinishedGameResults(gameId) {
     const game = snap.val();
     if (!game) return;
     const results = game.results || [];
-    // Medals for top 3
+    // Medals for top 3 unique places
     const medals = ['🥇','🥈','🥉'];
+    let rows = [];
+    let lastPercent = null;
+    let lastCompleted = null;
+    let uniquePlace = 1; // 1-based: 1=first, 2=second, 3=third, ...
+    let displayPlace = 1;
+    results.forEach((p, i) => {
+      if (i === 0) {
+        // first row
+        lastPercent = p.percent;
+        lastCompleted = p.completedCount;
+        displayPlace = uniquePlace;
+      } else {
+        if (p.percent !== lastPercent || p.completedCount !== lastCompleted) {
+          uniquePlace++;
+          displayPlace = uniquePlace;
+        } // else, same place as previous
+        lastPercent = p.percent;
+        lastCompleted = p.completedCount;
+      }
+      let style = '';
+      if (displayPlace === 1) style = 'background:#e8f5e9;font-weight:bold;color:#2e7d32;';
+      else if (displayPlace === 2) style = 'background:#f3e5f5;font-weight:bold;color:#7b1fa2;';
+      else if (displayPlace === 3) style = 'background:#fffde7;font-weight:bold;color:#fbc02d;';
+      rows.push(`<tr style='${style}'>
+        <td style='font-size:1.2em;'>${medals[displayPlace-1]||displayPlace}</td>
+        <td>${p.name}</td>
+        <td>${p.completedCount}/${p.totalItems}</td>
+        <td>${p.percent}%</td>
+      </tr>`);
+    });
     document.getElementById('finishedGameResults').innerHTML = `
       <div class='victor-results-card' style="background:#fff;border-radius:16px;box-shadow:0 2px 12px #0002;padding:28px 18px 18px 18px;max-width:520px;margin:0 auto 24px auto;">
         <div style="font-size:1.3em;font-weight:bold;text-align:center;margin-bottom:8px;">${game.name}</div>
@@ -1014,18 +1047,7 @@ function showFinishedGameResults(gameId) {
         <table class='table' style='width:100%;max-width:420px;margin:0 auto 0 auto;'>
           <thead><tr><th>Place</th><th>Name</th><th>Score</th><th>Percent</th></tr></thead>
           <tbody>
-            ${results.map((p,i)=>{
-              let style = '';
-              if(i===0) style = 'background:#e8f5e9;font-weight:bold;color:#2e7d32;';
-              else if(i===1) style = 'background:#f3e5f5;font-weight:bold;color:#7b1fa2;';
-              else if(i===2) style = 'background:#fffde7;font-weight:bold;color:#fbc02d;';
-              return `<tr style='${style}'>
-                <td style='font-size:1.2em;'>${medals[i]||i+1}</td>
-                <td>${p.name}</td>
-                <td>${p.completedCount}/${p.totalItems}</td>
-                <td>${p.percent}%</td>
-              </tr>`;
-            }).join('')}
+            ${rows.join('')}
           </tbody>
         </table>
         <div style="text-align:center;margin-top:18px;">
@@ -1036,11 +1058,165 @@ function showFinishedGameResults(gameId) {
   });
 }
 
+// --- ADMIN: Create Fake Game ---
+function adminCreateFakeGame() {
+  // Pick a random name, difficulty, and theme
+  const fakeNames = [
+    "Test Game", "Demo Bingo", "Practice Round", "Sample Event", "Fake Game", "Admin Test", "QA Session", "Debug Bingo"
+  ];
+  const name = fakeNames[Math.floor(Math.random() * fakeNames.length)] + " " + (Math.floor(Math.random()*1000));
+  const difficultyKeys = Object.keys(difficultySettings);
+  const themeKeys = Object.keys(themeSettings);
+  const difficultyKey = difficultyKeys[Math.floor(Math.random() * difficultyKeys.length)];
+  const themeKey = themeKeys[Math.floor(Math.random() * themeKeys.length)];
+  const diff = difficultySettings[difficultyKey];
+  const thm = themeSettings[themeKey];
+  db.ref(ITEM_PATH).once('value').then(snap => {
+    const itemsArr = snap.val() || DEFAULT_ITEMS;
+    const selectedItems = shuffleArray([...itemsArr]).slice(0, diff.total);
+    const gameId = name.replace(/\W/g,"") + "_" + Date.now();
+    db.ref(`${GAMES_PATH}/${gameId}`).set({
+      id: gameId,
+      name: name,
+      difficulty: diff,
+      difficultyKey: difficultyKey,
+      theme: thm,
+      themeKey: themeKey,
+      items: selectedItems,
+      created: new Date().toISOString(),
+      isOpen: true
+    }).then(()=>{
+      // Add fake players
+      const fakePlayerNames = [
+        "Alice", "Bob", "Charlie", "Dana", "Eve", "Frank", "Grace", "Heidi", "Ivan", "Judy"
+      ];
+      const numPlayers = 3 + Math.floor(Math.random()*3); // 3-5 players
+      const usedNames = shuffleArray(fakePlayerNames).slice(0, numPlayers);
+      const playerPromises = usedNames.map(playerName => {
+        const playerId = playerName + "_" + Math.floor(Math.random()*10000);
+        const playerItems = shuffleArray([...selectedItems]);
+        // Randomly mark some items as completed
+        const completed = playerItems.map(()=>Math.random()<0.4);
+        const completedCount = completed.filter(Boolean).length;
+        return db.ref(`${PLAYERS_PATH}/${gameId}/${playerId}`).set({
+          id: playerId,
+          name: playerName,
+          password: "fake",
+          completed,
+          completedCount,
+          totalItems: playerItems.length,
+          items: playerItems,
+          timestamp: Date.now() - Math.floor(Math.random()*1000000)
+        });
+      });
+      Promise.all(playerPromises).then(()=>{
+        alert("Fake game created with " + numPlayers + " fake players!\nName: " + name + "\nTheme: " + thm.name + "\nDifficulty: " + diff.name);
+        renderAdminGamesList();
+      });
+    });
+  });
+}
+
 function hideHallOfVictors() {
   const hallDiv = document.getElementById('hallOfVictors');
   if (hallDiv) hallDiv.style.display = 'none';
   document.getElementById('mainMenu').style.display = 'grid';
-  // Optionally clear results to avoid stale content
+  // Optionally clear results
   const resultsDiv = document.getElementById('finishedGameResults');
   if (resultsDiv) resultsDiv.innerHTML = '';
+}
+
+// --- Item Lists Management ---
+function fetchItemListsAndRender() {
+  db.ref(ITEM_LISTS_PATH).once('value').then(snap => {
+    allItemLists = snap.val() || { default: { id: "default", name: "Default", items: DEFAULT_ITEMS } };
+    renderItemListsPanel();
+    populateItemListSelectors();
+    // If a list is being edited, refresh its panel
+    if (currentListId && allItemLists[currentListId]) editItemList(currentListId);
+    else document.getElementById('editListPanel').innerHTML = '';
+  });
+}
+
+function renderItemListsPanel() {
+  const panel = document.getElementById('itemListsPanel');
+  if (!panel) return;
+  let html = Object.values(allItemLists).map(list =>
+    `<div style="margin-bottom:8px;">
+      <b>${list.name}</b>
+      <button class="btn" onclick="editItemList('${list.id}')">Edit</button>
+      ${list.id !== 'default' ? `<button class="btn btn-danger" onclick="deleteItemList('${list.id}')">Delete</button>` : '<span style="color:#aaa;font-size:0.95em;">(cannot delete default)</span>'}
+    </div>`
+  ).join('');
+  panel.innerHTML = html;
+}
+
+function populateItemListSelectors() {
+  const selects = [document.getElementById('adminItemListSelect'), document.getElementById('playerItemListSelect')];
+  selects.forEach(sel => {
+    if (!sel) return;
+    sel.innerHTML = Object.values(allItemLists).map(list =>
+      `<option value="${list.id}">${list.name}</option>`
+    ).join('');
+  });
+}
+
+// Add event listener for addListForm if not already present
+setTimeout(() => {
+  const addListForm = document.getElementById('addListForm');
+  if (addListForm && !addListForm._bound) {
+    addListForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('newListName').value.trim();
+      if (!name) return;
+      const id = name.replace(/\W/g, "").toLowerCase() + "_" + Date.now();
+      db.ref(`${ITEM_LISTS_PATH}/${id}`).set({ id, name, items: [] }).then(fetchItemListsAndRender);
+      document.getElementById('newListName').value = '';
+    });
+    addListForm._bound = true;
+  }
+}, 500);
+
+function editItemList(listId) {
+  currentListId = listId;
+  const list = allItemLists[listId];
+  const panel = document.getElementById('editListPanel');
+  if (!panel) return;
+  let html = `<h4>Edit List: ${list.name}</h4>`;
+  html += `<ul id='editListItems'>` + list.items.map((item, idx) =>
+    `<li>${item} <button onclick="removeItemFromList('${list.id}',${idx})" class="btn btn-danger">Remove</button></li>`
+  ).join('') + `</ul>`;
+  html += `<form id='addItemToListForm' style='margin-top:8px;'><input type='text' id='addItemToListInput' placeholder='New Item'><button type='submit' class='btn btn-success'>Add</button></form>`;
+  panel.innerHTML = html;
+  setTimeout(() => {
+    const addItemForm = document.getElementById('addItemToListForm');
+    if (addItemForm && !addItemForm._bound) {
+      addItemForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const val = document.getElementById('addItemToListInput').value.trim();
+        if (!val) return;
+        db.ref(`${ITEM_LISTS_PATH}/${listId}/items`).transaction(items => {
+          items = Array.isArray(items) ? items : [];
+          if (items.includes(val)) return;
+          items.push(val);
+          return items;
+        }, fetchItemListsAndRender);
+        document.getElementById('addItemToListInput').value = '';
+      });
+      addItemForm._bound = true;
+    }
+  }, 100);
+}
+
+function removeItemFromList(listId, idx) {
+  const list = allItemLists[listId];
+  if (!list) return;
+  list.items.splice(idx, 1);
+  db.ref(`${ITEM_LISTS_PATH}/${listId}/items`).set(list.items).then(fetchItemListsAndRender);
+}
+
+function deleteItemList(listId) {
+  if (listId === 'default') return alert('Cannot delete the default list!');
+  if (!confirm('Delete this list?')) return;
+  db.ref(`${ITEM_LISTS_PATH}/${listId}`).remove().then(fetchItemListsAndRender);
 }

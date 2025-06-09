@@ -5,6 +5,10 @@ body {
   min-height: 100vh;
   color: #222;
 }
+body.dark-mode {
+  background: linear-gradient(135deg, #181c24 0%, #23272f 100%);
+  color: #e0e7ff;
+}
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -41,10 +45,18 @@ body {
   cursor: pointer;
   border: 1.5px solid #e3e8f0;
 }
+body.dark-mode .menu-card {
+  background: linear-gradient(120deg, #23272f 60%, #181c24 100%) !important;
+  border-color: #444a5a;
+  color: #e0e7ff;
+}
 .menu-card:hover {
   transform: translateY(-7px) scale(1.025);
   box-shadow: 0 12px 40px 0 rgba(80, 120, 200, 0.18);
   border-color: #b3c6f7;
+}
+body.dark-mode .menu-card:hover {
+  border-color: #4f6ef7;
 }
 .menu-card h3 {
   font-size: 1.6rem;
@@ -69,21 +81,68 @@ body {
   font-weight: 600;
   box-shadow: 0 2px 8px #4f6ef71a;
 }
+body.dark-mode .btn,
+body.dark-mode button,
+body.dark-mode input[type="button"],
+body.dark-mode input[type="submit"] {
+  background: linear-gradient(90deg, #23272f 0%, #4f6ef7 100%);
+  color: #e0e7ff;
+  box-shadow: 0 2px 8px #0006;
+  border: 1.5px solid #444a5a;
+}
 .btn:hover {
   background: linear-gradient(90deg, #6ee7b7 0%, #4f6ef7 100%);
   box-shadow: 0 4px 16px #4f6ef71a;
 }
+body.dark-mode .btn:hover,
+body.dark-mode button:hover,
+body.dark-mode input[type="button"]:hover,
+body.dark-mode input[type="submit"]:hover {
+  background: linear-gradient(90deg, #4f6ef7 0%, #23272f 100%);
+}
 .btn-danger {
   background: linear-gradient(90deg, #ff6b6b 0%, #ffb86b 100%);
+}
+body.dark-mode .btn-danger,
+body.dark-mode button.btn-danger {
+  background: linear-gradient(90deg, #b91c1c 0%, #ffb86b 100%);
+  color: #fff;
 }
 .btn-danger:hover {
   background: linear-gradient(90deg, #ffb86b 0%, #ff6b6b 100%);
 }
+body.dark-mode .btn-danger:hover,
+body.dark-mode button.btn-danger:hover {
+  background: linear-gradient(90deg, #ffb86b 0%, #b91c1c 100%);
+}
 .btn-success {
   background: linear-gradient(90deg, #34d399 0%, #4f6ef7 100%);
 }
+body.dark-mode .btn-success,
+body.dark-mode button.btn-success {
+  background: linear-gradient(90deg, #059669 0%, #4f6ef7 100%);
+  color: #fff;
+}
 .btn-success:hover {
   background: linear-gradient(90deg, #4f6ef7 0%, #34d399 100%);
+}
+body.dark-mode .btn-success:hover {
+  background: linear-gradient(90deg, #4f6ef7 0%, #059669 100%);
+}
+.btn-warning {
+  background: linear-gradient(90deg, #f59e42 0%, #f43f5e 100%);
+}
+body.dark-mode .btn-warning,
+body.dark-mode button.btn-warning {
+  background: linear-gradient(90deg, #f59e42 0%, #f43f5e 100%);
+  color: #fff;
+}
+.btn-warning:hover {
+  background: linear-gradient(90deg, #f43f5e 0%, #f59e42 100%);
+}
+body.dark-mode .btn-warning:hover,
+body.dark-mode button.btn-warning:hover {
+  background: linear-gradient(90deg, #f43f5e 0%, #f59e42 100%);
 }
 .modal {
   display: none;
@@ -105,6 +164,9 @@ body {
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 8px 40px 0 #4f6ef71a;
+}
+body.dark-mode .modal {
+  background: rgba(24,28,36,0.88);
 }
 .modal h2 {
   margin-bottom: 20px;
@@ -136,6 +198,15 @@ body {
   padding: 32px 24px;
   margin-bottom: 36px;
   box-shadow: 0 6px 32px 0 rgba(80, 120, 200, 0.10);
+}
+body.dark-mode .game-board,
+body.dark-mode .leaderboard,
+body.dark-mode .modal-content,
+body.dark-mode .victor-card,
+body.dark-mode .victor-results-card {
+  background: #23272f !important;
+  color: #e0e7ff !important;
+  box-shadow: 0 2px 16px #0008;
 }
 .game-header {
   text-align: center;
@@ -200,11 +271,20 @@ body {
   box-shadow: 0 2px 8px #4f6ef70a;
   font-size: 1.08rem;
 }
+body.dark-mode .checklist-item {
+  background: linear-gradient(90deg, #23272f 60%, #181c24 100%);
+  border-color: #444a5a;
+  color: #e0e7ff;
+}
 .checklist-item.completed {
   background: linear-gradient(90deg, #4f6ef7 60%, #6ee7b7 100%);
-  color: white;
+  color: #fff;
   border-color: #4f6ef7;
-  box-shadow: 0 4px 16px #4f6ef71a;
+}
+body.dark-mode .checklist-item.completed {
+  background: linear-gradient(90deg, #4f6ef7 60%, #059669 100%);
+  color: #fff;
+  border-color: #4f6ef7;
 }
 .checklist-item input[type="checkbox"] {
   width: 22px;
@@ -246,11 +326,21 @@ body {
   font-weight: bold;
   border-radius: 6px 6px 0 0;
 }
+body.dark-mode .leaderboard-table th {
+  background: #23272f;
+  color: #e0e7ff;
+}
 .leaderboard-table tr.me {
   background: #e0e7ff;
 }
+body.dark-mode .leaderboard-table tr.me {
+  background: #23272f;
+}
 .leaderboard-table tr:hover {
   background: #f5f7fa;
+}
+body.dark-mode .leaderboard-table tr:hover {
+  background: #181c24;
 }
 .theme-classic { --primary: #4285F4; --secondary: #E8F0FE; --accent: #1A73E8; }
 .theme-fire { --primary: #FF5722; --secondary: #FFF3E0; --accent: #D84315; }
@@ -327,11 +417,20 @@ body {
   border: 1.5px solid #e3e8f0;
   transition: box-shadow 0.2s, border 0.2s, background 0.2s;
 }
+body.dark-mode .player-progress-bar {
+  background: linear-gradient(90deg, #23272f 60%, #181c24 100%) !important;
+  border-color: #444a5a;
+  color: #e0e7ff;
+}
 .player-progress-bar:hover {
   background: linear-gradient(90deg, #6ee7b7 0%, #4f6ef7 100%);
   color: white;
   border-color: #4f6ef7;
-  box-shadow: 0 4px 16px #4f6ef71a;
+}
+body.dark-mode .player-progress-bar:hover {
+  background: linear-gradient(90deg, #059669 0%, #4f6ef7 100%) !important;
+  color: #fff;
+  border-color: #4f6ef7;
 }
 .player-progress-bar .bar-bg {
   display: inline-block;

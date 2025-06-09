@@ -11,13 +11,13 @@
 <body>
   <div class="container">
     <!-- Header or Main Menu (add your own as needed) -->
-    <div class="header">
+    <div class="header" style="position:relative;">
       <h1>PD Bingo</h1>
-      <p>Welcome to Multiplayer PDB! First one here from your school, create a new game with your school and event in the title so others can join!</p>
+      <button id="darkModeToggle" class="btn" style="width:auto;position:absolute;top:18px;right:18px;z-index:10;">🌙 Dark Mode</button>
     </div>
 
     <!-- Join Game Modal -->
-    <div id="joinGameModal" class="modal" onclick="event.stopPropagation()">
+    <div id="joinGameModal" class="modal">
       <div class="modal-content">
         <h2>🚀 Join a Game</h2>
         <form onsubmit="joinSelectedGame(event)">
@@ -38,13 +38,18 @@
     </div>
 
     <!-- Player Create Game Modal -->
-    <div id="playerCreateGameModal" class="modal">
+    <div id="playerCreateGameModal" class="modal" style="display:none;">
       <div class="modal-content">
         <h2>Create a Game</h2>
         <form id="playerCreateGameForm">
           <div class="form-group">
             <label for="playerGameName">Game Name:</label>
             <input type="text" id="playerGameName" required maxlength="30" placeholder="Enter game name">
+          </div>
+          <div class="form-group">
+            <label for="playerItemListSelect">Item List:</label>
+            <select id="playerItemListSelect"></select>
+            <span style="font-size:0.95em;color:#888;margin-left:8px;">(Leave as default if unsure)</span>
           </div>
           <div class="form-group">
             <label for="playerDifficulty">Difficulty:</label>
@@ -138,14 +143,15 @@
         <div>
           <button onclick="showAdminTab('createGameTab')" class="btn">Create Game</button>
           <button onclick="showAdminTab('manageItemsTab')" class="btn">Manage Items</button>
+          <button onclick="showAdminTab('manageListsTab')" class="btn">Manage Item Lists</button>
           <button onclick="showAdminTab('gamesListTab')" class="btn">Manage Games</button>
-          <button onclick="showAdminTab('hallVictorsAdminTab')" class="btn">Manage Hall of Victors</button>
           <button onclick="adminCreateFakeGame()" class="btn btn-warning">Create Fake Game</button>
         </div>
         <div id="createGameTab" style="display:none;">
           <h3>Create Game</h3>
           <form id="createGameForm">
             <input type="text" id="adminGameName" placeholder="Game Name" required>
+            <select id="adminItemListSelect"></select>
             <select id="difficulty">
               <option value="easy">Easy</option>
               <option value="normal">Normal</option>
@@ -171,6 +177,15 @@
           </form>
           <ul id="itemList"></ul>
         </div>
+        <div id="manageListsTab" style="display:none;">
+          <h3>Manage Item Lists</h3>
+          <div id="itemListsPanel"></div>
+          <form id="addListForm" style="margin-top:10px;display:flex;gap:8px;">
+            <input type="text" id="newListName" placeholder="New List Name" required>
+            <button type="submit" class="btn btn-success">Add List</button>
+          </form>
+          <div id="editListPanel" style="margin-top:18px;"></div>
+        </div>
         <div id="gamesListTab" style="display:none;">
           <h3>Manage Games</h3>
           <div id="adminGamesList"></div>
@@ -189,10 +204,6 @@
               adminFinishGame(gameIds[idx-1]);
             ">Finish Game</button>
           </div>
-        </div>
-        <div id="hallVictorsAdminTab" style="display:none;">
-          <h3>Manage Hall of Victors</h3>
-          <div id="hallVictorsAdminList"></div>
         </div>
         <button type="button" class="btn" onclick="closeModal('adminGameModal')">Close</button>
       </div>
@@ -246,5 +257,21 @@
     <!-- Add any other HTML content, menus, or game board here -->
   </div>
   <script src="game.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const darkModeBtn = document.getElementById('darkModeToggle');
+      function setDarkMode(on) {
+        document.body.classList.toggle('dark-mode', on);
+        localStorage.setItem('darkMode', on ? '1' : '0');
+        darkModeBtn.textContent = on ? '☀️ Light Mode' : '🌙 Dark Mode';
+      }
+      if (darkModeBtn) {
+        darkModeBtn.addEventListener('click', () => {
+          setDarkMode(!document.body.classList.contains('dark-mode'));
+        });
+        setDarkMode(localStorage.getItem('darkMode') === '1');
+      }
+    });
+  </script>
 </body>
 </html>
